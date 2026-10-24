@@ -208,6 +208,15 @@
                     <button class="@(_catalogTab == "textures" ? "active" : "")" @onclick='() => _catalogTab = "textures"'>Textures</button>
                 </div>
                 <div class="@(_catalogTab == "cabinets" ? "" : "hidden")">
+                    <h3>Built-in</h3>
+                    <div class="grid">
+                        <div class="catalog-item" draggable="true" data-template="@ProjectEditor.WardrobeTemplateKey"
+                             title="Parametric wardrobe that fills the room's back wall; design its sections in Properties"
+                             @onclick="() => _selectedTemplate = null" @ondblclick="InsertWardrobe">
+                            <img data-thumb="@ProjectEditor.WardrobeTemplateKey" alt="" width="120" height="104" />
+                            <span>Built-in wardrobe</span>
+                        </div>
+                    </div>
                     @foreach (var category in TemplateLibrary.All.GroupBy(t => t.Category))
                     {
                         <h3>@category.Key</h3>
@@ -273,7 +282,20 @@
             <div class="tab-body properties @(_rightTab == "properties" ? "" : "hidden")" inert="@_busy">
                 <h3>Selection</h3>
                 <p class="muted">@SelectionText</p>
-                @if (SelectedBoard is { } board)
+                @if (SelectedGroup is { Wardrobe: { } design } wardrobe)
+                {
+                    var wardrobeId = wardrobe.Id;
+                    <div class="fields">
+                        <h3>Item</h3>
+                        <label>Name <input value="@wardrobe.Name" @onchange="e => EditGroupName(wardrobeId, e)" /></label>
+                    </div>
+                    <WardrobeEditor @key="wardrobeId" Design="design" Materials="_editor.Project.Materials"
+                                    OnEdit="change => EditWardrobe(wardrobeId, change)"
+                                    OnSelectSection="k => SelectWardrobeSection(wardrobeId, k)"
+                                    OnFitRoom="() => FitWardrobeToRoom(wardrobeId)"
+                                    OnConvert="() => _editor.ConvertToBoards(wardrobeId)" />
+                }
+                else if (SelectedBoard is { } board)
                 {
                     var boardId = board.Id;
                     var group = _editor.Project.FindGroup(board.GroupId);

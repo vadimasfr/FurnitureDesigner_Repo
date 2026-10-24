@@ -18,7 +18,7 @@ public static class ProjectReports
 {
     /// <summary>Identical boards (same material and cut size) are merged into one row with a quantity.</summary>
     public static IReadOnlyList<CutListRow> CutList(FurnitureProject project) =>
-        project.Boards
+        project.Boards.Where(b => b.Kind != BoardKind.Rail)
             .Select(b => (Board: b, Dim: b.CutDimensions(), Material: project.FindMaterial(b.MaterialId)?.Name ?? b.MaterialId))
             .GroupBy(x => (x.Material, L: Math.Round(x.Dim.Length, 1), W: Math.Round(x.Dim.Width, 1), T: Math.Round(x.Dim.Thickness, 1)))
             .Select(g => new CutListRow(g.Key.Material, g.Key.L, g.Key.W, g.Key.T, g.Count(),
@@ -27,7 +27,7 @@ public static class ProjectReports
             .ToList();
 
     public static IReadOnlyList<CostRow> Costs(FurnitureProject project) =>
-        project.Boards
+        project.Boards.Where(b => b.Kind != BoardKind.Rail)
             .GroupBy(b => b.MaterialId)
             .Select(g =>
             {

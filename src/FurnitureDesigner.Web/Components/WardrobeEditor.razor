@@ -1,0 +1,305 @@
+@using FurnitureDesigner.Core.Parametric
+@using FurnitureDesigner.Web.Components.Dialogs
+@* Designer for a parametric built-in wardrobe: niche, materials, and a clickable front diagram of its sections and zones.
+   Every change goes through OnEdit, which regenerates the boards as one undo step. *@
+
+<div class="wardrobe-editor">
+    <div class="fields">
+        <h3>Niche</h3>
+        <label>Width <input type="number" step="any" value="@F(Design.Width)" @onchange="e => Number(e, (d, v) => d.Width = v, 300)" /></label>
+        <label>Height <input type="number" step="any" value="@F(Design.Height)" @onchange="e => Number(e, (d, v) => d.Height = v, 300)" /></label>
+        <label>Depth <input type="number" step="any" value="@F(Design.Depth)" @onchange="e => Number(e, (d, v) => d.Depth = v, 150)" /></label>
+        <label title="Gap left to each side wall and to the ceiling">Gap to walls <input type="number" step="any" value="@F(Design.Clearance)" @onchange="e => Number(e, (d, v) => d.Clearance = v, 0)" /></label>
+        <label>Plinth <input type="number" step="any" value="@F(Design.Plinth)" @onchange="e => Number(e, (d, v) => d.Plinth = v, 0)" /></label>
+        <label title="Separate storage box on top with its own doors; 0 = none">Top storage <input type="number" step="any" value="@F(Design.TopStorage)" @onchange="e => Number(e, (d, v) => d.TopStorage = v, 0)" /></label>
+        <button class="link" @onclick="OnFitRoom" title="Make the niche the size of the room and put the wardrobe against the back wall">Fit to room</button>
+
+        <h3>Materials</h3>
+        <label>Carcass <MaterialSelect Materials="Materials" Value="@Design.CarcassMaterialId" ValueChanged="id => Edit(d => d.CarcassMaterialId = id)" /></label>
+        <label>Fronts <MaterialSelect Materials="Materials" Value="@Design.FrontMaterialId" ValueChanged="id => Edit(d => d.FrontMaterialId = id)" /></label>
+        <label>Back <MaterialSelect Materials="Materials" Value="@Design.BackMaterialId" ValueChanged="id => Edit(d => d.BackMaterialId = id)" /></label>
+        <label>
+            Front style
+            <select value="@Design.FrontStyle" @onchange="e => Edit(d => d.FrontStyle = Enum.Parse<FrontStyle>(e.Value!.ToString()!))">
+                @foreach (var style in Enum.GetValues<FrontStyle>())
+                {
+                    <option value="@style">@style</option>
+                }
+            </select>
+        </label>
+    </div>
+
+    <h3>
+        Layout
+        <span class="actions">
+            <button class="small-button" title="Add a section on the right" @onclick="AddSection">+ Section</button>
+        </span>
+    </h3>
+    <svg class="wardrobe-diagram" viewBox="@ViewBox" role="img" aria-label="Front view of the wardrobe">
+        <rect x="0" y="0" width="@F(Design.Width)" height="@F(Design.Height)" class="niche" />
+        @if (Design.TopStorage > 0)
+        {
+            <rect x="0" y="0" width="@F(Design.Width)" height="@F(Design.TopStorage)" class="top-storage" />
+        }
+        @if (Design.Plinth > 0)
+        {
+            <rect x="0" y="@F(Design.Height - Design.Plinth)" width="@F(Design.Width)" height="@F(Design.Plinth)" class="plinth" />
+        }
+        @foreach (var column in Columns())
+        {
+            var k = column.Index;
+            <g class="section @(k == _section ? "selected" : "")">
+                @foreach (var zone in column.Zones)
+                {
+                    var z = zone.Index;
+                    <g class="zone @(k == _section && z == _zone ? "selected" : "")" @onclick="() => SelectZone(k, z)">
+                        <rect x="@F(column.X)" y="@F(zone.Y)" width="@F(column.Width)" height="@F(zone.Height)" />
+                        @switch (zone.Kind)
+                        {
+                            case ZoneKind.Shelves:
+                                for (int s = 1; s <= zone.Count; s++)
+                                {
+                                    var sy = zone.Y + zone.Height * s / (zone.Count + 1);
+                                    <line x1="@F(column.X + 15)" x2="@F(column.X + column.Width - 15)" y1="@F(sy)" y2="@F(sy)" class="shelf" />
+                                }
+                                break;
+                            case ZoneKind.HangingRail:
+                                <line x1="@F(column.X + 30)" x2="@F(column.X + column.Width - 30)" y1="@F(zone.Y + 80)" y2="@F(zone.Y + 80)" class="rail" />
+                                <path d="@Hanger(column.X + column.Width / 2, zone.Y + 80)" class="hanger" />
+                                break;
+                            case ZoneKind.Drawers:
+                                for (int s = 0; s < zone.Count; s++)
+                                {
+                                    var dh = zone.Height / zone.Count;
+                                    <rect x="@F(column.X + 20)" y="@F(zone.Y + s * dh + 12)" width="@F(column.Width - 40)" height="@F(dh - 24)" rx="8" class="drawer" />
+                                }
+                                break;
+                        }
+                    </g>
+                }
+                <text x="@F(column.X + column.Width / 2)" y="@F(Design.Height + 120)" class="label">@F(column.Width)</text>
+            </g>
+        }
+    </svg>
+    <p class="hint">Click a zone to edit it. Sizes under the diagram are approximate section widths (mm).</p>
+
+    @if (CurrentSection is { } section)
+    {
+        <div class="section-editor">
+            <h3>
+                Section @(_section + 1)
+                <span class="actions">
+                    <button class="small-button" title="Move left" disabled="@(_section == 0)" @onclick="() => MoveSection(-1)">◀</button>
+                    <button class="small-button" title="Move right" disabled="@(_section == Design.Sections.Count - 1)" @onclick="() => MoveSection(1)">▶</button>
+                    <button class="small-button" title="Select this section's boards in the 3D view" @onclick="() => OnSelectSection.InvokeAsync(_section)">Select</button>
+                    <button class="small-button danger" title="Remove section" disabled="@(Design.Sections.Count <= 1)" @onclick="RemoveSection">Remove</button>
+                </span>
+            </h3>
+            <div class="fields">
+                <label title="Inner width; empty = share the remaining space">
+                    Width
+                    <input type="number" step="any" placeholder="auto" value="@(section.Width is { } w ? F(w) : "")"
+                           @onchange="e => Optional(e, (d, v) => d.Sections[_section].Width = v)" />
+                </label>
+                <label>
+                    Doors
+                    <select value="@(section.Doors?.ToString() ?? "")" @onchange="e => Edit(d => d.Sections[_section].Doors = int.TryParse(e.Value?.ToString(), out var n) ? n : null)">
+                        <option value="">Auto</option>
+                        <option value="0">None (open)</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                    </select>
+                </label>
+            </div>
+            <div class="presets">
+                <span>Preset:</span>
+                <button class="small-button" @onclick="() => ApplyPreset(SectionPreset.Shelves)">Shelves</button>
+                <button class="small-button" @onclick="() => ApplyPreset(SectionPreset.Hanging)">Hanging</button>
+                <button class="small-button" @onclick="() => ApplyPreset(SectionPreset.LongHanging)">Long hanging</button>
+                <button class="small-button" @onclick="() => ApplyPreset(SectionPreset.DrawersAndHanging)">Drawers + hanging</button>
+            </div>
+
+            <h3>
+                Zones <small>(top to bottom)</small>
+                <span class="actions"><button class="small-button" title="Add a zone at the top" @onclick="AddZone">+ Zone</button></span>
+            </h3>
+            @for (int i = section.Zones.Count - 1; i >= 0; i--)
+            {
+                var z = i;
+                var zone = section.Zones[z];
+                <div class="zone-row @(z == _zone ? "selected" : "")" @onclick="() => _zone = z">
+                    <select value="@zone.Kind" @onchange="e => Edit(d => d.Sections[_section].Zones[z].Kind = Enum.Parse<ZoneKind>(e.Value!.ToString()!))">
+                        <option value="@ZoneKind.Shelves">Shelves</option>
+                        <option value="@ZoneKind.HangingRail">Hanging rail</option>
+                        <option value="@ZoneKind.Drawers">Drawers</option>
+                        <option value="@ZoneKind.Open">Open</option>
+                    </select>
+                    @if (zone.Kind is ZoneKind.Shelves or ZoneKind.Drawers)
+                    {
+                        <input class="count" type="number" min="@(zone.Kind == ZoneKind.Drawers ? 1 : 0)" max="12" step="1" value="@zone.Count" title="@(zone.Kind == ZoneKind.Drawers ? "Drawers" : "Shelves")"
+                               @onchange="e => Count(e, z)" />
+                    }
+                    else
+                    {
+                        <span class="count"></span>
+                    }
+                    <input class="height" type="number" step="any" placeholder="auto" title="Inner height (mm); empty = share the remaining space"
+                           value="@(zone.Height is { } h ? F(h) : "")" @onchange="e => Optional(e, (d, v) => d.Sections[_section].Zones[z].Height = v)" />
+                    <button class="small-button danger" title="Remove zone" disabled="@(section.Zones.Count <= 1)"
+                            @onclick="() => Edit(d => d.Sections[_section].Zones.RemoveAt(z))" @onclick:stopPropagation="true">✕</button>
+                </div>
+            }
+        </div>
+    }
+
+    @if (Warnings.Count > 0)
+    {
+        <ul class="warnings">
+            @foreach (var warning in Warnings)
+            {
+                <li>@warning</li>
+            }
+        </ul>
+    }
+
+    <div class="buttons left">
+        <button @onclick="OnConvert" title="Keep the boards but stop regenerating them from this design (edit board by board)">Convert to plain boards</button>
+    </div>
+</div>
+
+@code {
+    private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+
+    [Parameter, EditorRequired] public WardrobeDesign Design { get; set; } = null!;
+    [Parameter, EditorRequired] public IReadOnlyList<BoardMaterial> Materials { get; set; } = [];
+    [Parameter] public EventCallback<Action<WardrobeDesign>> OnEdit { get; set; }
+    [Parameter] public EventCallback<int> OnSelectSection { get; set; }
+    [Parameter] public EventCallback OnFitRoom { get; set; }
+    [Parameter] public EventCallback OnConvert { get; set; }
+
+    private int _section;
+    private int _zone;
+
+    private IReadOnlyList<string> Warnings => WardrobeBuilder.Build(Design, Materials).Warnings;
+
+    private WardrobeSection? CurrentSection => _section < Design.Sections.Count ? Design.Sections[_section] : null;
+
+    private string ViewBox => string.Create(Inv, $"-40 -40 {Design.Width + 80} {Design.Height + 200}");
+
+    protected override void OnParametersSet()
+    {
+        _section = Math.Clamp(_section, 0, Math.Max(0, Design.Sections.Count - 1));
+        _zone = Math.Clamp(_zone, 0, Math.Max(0, (CurrentSection?.Zones.Count ?? 1) - 1));
+    }
+
+    private static string F(double value) => value.ToString("0.#", Inv);
+
+    private Task Edit(Action<WardrobeDesign> change) => OnEdit.InvokeAsync(change);
+
+    private Task Number(ChangeEventArgs e, Action<WardrobeDesign, double> set, double min)
+    {
+        if (double.TryParse(e.Value?.ToString(), NumberStyles.Float, Inv, out double v) && double.IsFinite(v) && v >= min)
+            return Edit(d => set(d, v));
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Empty = automatic (null); otherwise a positive size.</summary>
+    private Task Optional(ChangeEventArgs e, Action<WardrobeDesign, double?> set)
+    {
+        string text = e.Value?.ToString()?.Trim() ?? "";
+        if (text.Length == 0)
+            return Edit(d => set(d, null));
+        if (double.TryParse(text, NumberStyles.Float, Inv, out double v) && double.IsFinite(v) && v > 0)
+            return Edit(d => set(d, v));
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task Count(ChangeEventArgs e, int zone)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int n) && n is >= 0 and <= 12)
+            return Edit(d => d.Sections[_section].Zones[zone].Count = n);
+        return Task.CompletedTask;
+    }
+
+    private void SelectZone(int section, int zone) => (_section, _zone) = (section, zone);
+
+    private Task AddSection()
+    {
+        _section = Design.Sections.Count;
+        _zone = 0;
+        return Edit(d => d.Sections.Add(WardrobeDesign.Preset(SectionPreset.Shelves)));
+    }
+
+    private Task RemoveSection()
+    {
+        int index = _section;
+        _section = Math.Max(0, index - 1);
+        return Edit(d => d.Sections.RemoveAt(index));
+    }
+
+    private Task MoveSection(int offset)
+    {
+        int from = _section, to = _section + offset;
+        _section = to;
+        return Edit(d => (d.Sections[from], d.Sections[to]) = (d.Sections[to], d.Sections[from]));
+    }
+
+    private Task ApplyPreset(SectionPreset preset)
+    {
+        int index = _section;
+        _zone = 0;
+        return Edit(d =>
+        {
+            var fresh = WardrobeDesign.Preset(preset);
+            fresh.Width = d.Sections[index].Width;
+            fresh.Doors = d.Sections[index].Doors;
+            d.Sections[index] = fresh;
+        });
+    }
+
+    private Task AddZone()
+    {
+        int index = _section;
+        _zone = Design.Sections[index].Zones.Count;
+        return Edit(d => d.Sections[index].Zones.Add(new WardrobeZone { Kind = ZoneKind.Shelves, Count = 1, Height = 350 }));
+    }
+
+    private static string Hanger(double x, double y) => string.Create(Inv,
+        $"M{x - 70},{y + 150} L{x},{y + 70} L{x + 70},{y + 150} Z M{x},{y + 70} L{x},{y + 40} Q{x},{y + 10} {x + 20},{y + 15}");
+
+    // ---- diagram layout (drawn in niche millimetres, y down) -------------------------------------
+
+    private sealed record ZoneBox(int Index, ZoneKind Kind, int Count, double Y, double Height);
+    private sealed record Column(int Index, double X, double Width, IReadOnlyList<ZoneBox> Zones);
+
+    private IEnumerable<Column> Columns()
+    {
+        double t = Materials.FirstOrDefault(m => m.Id == Design.CarcassMaterialId)?.Thickness ?? 18;
+        int n = Math.Max(1, Design.Sections.Count);
+        double x0 = Design.Clearance + t;
+        double inner = Design.Width - 2 * Design.Clearance - (n + 1) * t;
+        var widths = WardrobeBuilder.Distribute([.. Design.Sections.Select(s => s.Width)], inner, _ => { }, "");
+        double bottom = Design.Height - Design.Plinth - t;
+        double top = Design.Clearance + (Design.TopStorage > 0 ? Design.TopStorage : 0) + t;
+
+        double x = x0;
+        for (int k = 0; k < Design.Sections.Count; k++)
+        {
+            var zones = Design.Sections[k].Zones;
+            var heights = WardrobeBuilder.Distribute([.. zones.Select(z => z.Height)], bottom - top - (zones.Count - 1) * t, _ => { }, "");
+            var boxes = new List<ZoneBox>();
+            double y = bottom;
+            for (int i = 0; i < zones.Count; i++)
+            {
+                y -= heights[i];
+                boxes.Add(new ZoneBox(i, zones[i].Kind, Math.Max(0, zones[i].Count), y, heights[i]));
+                y -= t;
+            }
+            yield return new Column(k, x, widths[k], boxes);
+            x += widths[k] + t;
+        }
+    }
+}

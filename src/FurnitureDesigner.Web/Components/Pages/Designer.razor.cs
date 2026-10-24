@@ -4,6 +4,7 @@ using FurnitureDesigner.Ai;
 using FurnitureDesigner.Core.Editing;
 using FurnitureDesigner.Core.Import;
 using FurnitureDesigner.Core.Models;
+using FurnitureDesigner.Core.Parametric;
 using FurnitureDesigner.Core.Persistence;
 using FurnitureDesigner.Core.Reports;
 using FurnitureDesigner.Core.Templates;
@@ -177,11 +178,18 @@ public partial class Designer : IAsyncDisposable
         };
     }
 
-    private static object CatalogData() => new
+    private static object CatalogData()
     {
-        templates = TemplateLibrary.All.Select(t => new { key = t.Key, boards = t.Build(t.Defaults).Select(BoardData) }),
-        materials = FurnitureProject.CreateDefault().Materials.Select(MaterialData),
-    };
+        var materials = FurnitureProject.CreateDefault().Materials;
+        var wardrobe = WardrobeBuilder.Build(WardrobeDesign.ForNiche(2400, 2500, 600), materials).Boards;
+        return new
+        {
+            templates = TemplateLibrary.All
+                .Select(t => new { key = t.Key, boards = t.Build(t.Defaults).Select(BoardData) })
+                .Append(new { key = ProjectEditor.WardrobeTemplateKey, boards = wardrobe.Select(BoardData) }),
+            materials = materials.Select(MaterialData),
+        };
+    }
 
     // ---- calls from the 3D view ------------------------------------------------------------
 
@@ -253,6 +261,12 @@ public partial class Designer : IAsyncDisposable
     [JSInvokable]
     public void ViewportDrop(string templateKey, double centerX, double centerZ)
     {
+        if (templateKey == ProjectEditor.WardrobeTemplateKey)
+        {
+            InsertWardrobe();
+            StateHasChanged();
+            return;
+        }
         var template = TemplateLibrary.All.FirstOrDefault(t => t.Key == templateKey);
         if (_busy || template is null)
             return;
@@ -552,6 +566,48 @@ public partial class Designer : IAsyncDisposable
         }
         double x = _editor.NextFreeX(parameters.Elevation, parameters.Height, parameters.Width);
         _editor.Insert(dialog.Template, parameters, x, 0);
+    }
+
+    // ---- parametric wardrobe ---------------------------------------------------------------
+
+    /// <summary>Adds a wardrobe that fills the room's back wall and opens its designer.</summary>
+    private void InsertWardrobe()
+    {
+        if (!CanEdit)
+            return;
+        var room = _editor.Project.Room;
+        _editor.InsertWardrobe(WardrobeDesign.ForNiche(room.Width, room.Height, Math.Min(600, room.Depth)), 0, 0);
+        _rightTab = "properties";
+    }
+
+    private void EditWardrobe(Guid groupId, Action<WardrobeDesign> change)
+    {
+        if (!CanEdit || _editor.Project.FindGroup(groupId)?.Wardrobe is null)
+            return;
+        try
+        {
+            _editor.EditWardrobe(groupId, change);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            // The design changed under a stale control (e.g. undo while a field was focused): ignore the edit.
+        }
+    }
+
+    private void FitWardrobeToRoom(Guid groupId)
+    {
+        var room = _editor.Project.Room;
+        if (CanEdit)
+            _editor.EditWardrobe(groupId, d => (d.Width, d.Height) = (room.Width, room.Height), nicheOrigin: (0, 0));
+    }
+
+    /// <summary>Selects one section's boards (carcass parts, interior and fronts, including its top storage doors).</summary>
+    private void SelectWardrobeSection(Guid groupId, int section)
+    {
+        string inner = $"Section {section + 1} ", top = $"Top storage section {section + 1} ";
+        _editor.Select(_editor.Project.Boards
+            .Where(b => b.GroupId == groupId && (b.Name.StartsWith(inner, StringComparison.Ordinal) || b.Name.StartsWith(top, StringComparison.Ordinal)))
+            .Select(b => b.Id));
     }
 
     private void OpenNewMaterialDialog()

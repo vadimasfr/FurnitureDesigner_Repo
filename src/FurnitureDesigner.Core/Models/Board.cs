@@ -15,6 +15,8 @@ public enum BoardKind
     DrawerPart,
     Plinth,
     Countertop,
+    /// <summary>Hardware such as a hanging rail: drawn, but not a board to cut.</summary>
+    Rail,
 }
 
 /// <summary>

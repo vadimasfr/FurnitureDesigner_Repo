@@ -65,4 +65,13 @@ var components = app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 if (passwordGate)
     components.RequireAuthorization();
 
-app.Run();
+try
+{
+    app.Run();
+}
+catch (IOException ex) when (ex.InnerException is Microsoft.AspNetCore.Connections.AddressInUseException)
+{
+    // Usually a second copy of the app (dotnet run / dotnet watch / run.ps1): say so instead of a stack trace.
+    Console.Error.WriteLine($"{ex.Message} Another copy of Furniture Designer is probably running: stop it (Ctrl+C), or use run.ps1, which stops it for you.");
+    Environment.ExitCode = 1;
+}

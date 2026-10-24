@@ -31,6 +31,8 @@ public sealed class FurnitureGroup
     public string TemplateKey { get; set; } = "";
     /// <summary>Parameters the item was built with; lets it be rebuilt with new sizes. Null for imported items.</summary>
     public Templates.TemplateParameters? Parameters { get; set; }
+    /// <summary>Design of a parametric built-in wardrobe; its boards are regenerated from it. Null for other items.</summary>
+    public Parametric.WardrobeDesign? Wardrobe { get; set; }
 }
 
 public sealed class Room
@@ -65,6 +67,7 @@ public sealed class FurnitureProject
             new() { Id = "hdf", Name = "HDF white 3 mm", Color = "#E6E6E0", Thickness = 3, PricePerM2 = 8 },
             new() { Id = "worktop", Name = "Granite worktop", Color = "#B8B2A6", Thickness = 38, PricePerM2 = 70, Texture = MaterialTexture.Stone, TextureSize = 800 },
             new() { Id = "glass", Name = "Glass", Color = "#BFD9E0", Opacity = 0.35, Thickness = 4, PricePerM2 = 60 },
+            new() { Id = "chrome", Name = "Chrome (rails)", Color = "#C9CDD2", Thickness = 25 },
         ],
     };
 }

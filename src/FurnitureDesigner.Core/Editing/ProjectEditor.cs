@@ -1,4 +1,5 @@
 using FurnitureDesigner.Core.Models;
+using FurnitureDesigner.Core.Parametric;
 using FurnitureDesigner.Core.Persistence;
 using FurnitureDesigner.Core.Templates;
 
@@ -260,6 +261,94 @@ public sealed class ProjectEditor
         Select(boards.Select(b => b.Id));
     }
 
+    /// <summary>Adds a parametric wardrobe with its niche's back-left-bottom corner at (x, 0, z) and selects it.</summary>
+    public FurnitureGroup InsertWardrobe(WardrobeDesign design, double x, double z)
+    {
+        int number = Project.Groups.Count(g => g.Wardrobe is not null) + 1;
+        var group = new FurnitureGroup { Name = $"Built-in wardrobe #{number}", TemplateKey = WardrobeTemplateKey, Wardrobe = design };
+        var boards = PlaceWardrobe(group.Id, design, x, 0, z);
+        Execute(p =>
+        {
+            p.Groups.Add(group);
+            p.Boards.AddRange(boards);
+        });
+        Select(boards.Select(b => b.Id));
+        return group;
+    }
+
+    public const string WardrobeTemplateKey = "wardrobe-builtin";
+
+    /// <summary>
+    /// Changes a wardrobe's design and regenerates its boards where the wardrobe stands now (it may have been moved),
+    /// or with its niche at <paramref name="nicheOrigin"/>. Boards edited by hand inside it are replaced. One undo step.
+    /// </summary>
+    public void EditWardrobe(Guid groupId, Action<WardrobeDesign> change, (double X, double Z)? nicheOrigin = null)
+    {
+        var group = Project.FindGroup(groupId) ?? throw new InvalidOperationException("Item not found.");
+        var before = group.Wardrobe ?? throw new InvalidOperationException($"'{group.Name}' is not a parametric wardrobe.");
+        var design = before.Clone();
+        change(design);
+
+        // The niche's corner: where the boards are now, minus where the old design puts them inside its niche.
+        double x = 0, y = 0, z = 0;
+        if (nicheOrigin is { } origin)
+        {
+            (x, z) = origin;
+        }
+        else if (Box3.Of(Project.Boards.Where(b => b.GroupId == groupId)) is { } current
+                 && Box3.Of(WardrobeBuilder.Build(before, Project.Materials).Boards) is { } layout)
+        {
+            (x, y, z) = (current.MinX - layout.MinX, current.MinY - layout.MinY, current.MinZ - layout.MinZ);
+        }
+
+        var boards = PlaceWardrobe(groupId, design, x, y, z);
+        Execute(p =>
+        {
+            p.Boards.RemoveAll(b => b.GroupId == groupId);
+            p.Boards.AddRange(boards);
+            p.FindGroup(groupId)!.Wardrobe = design;
+        });
+        Select(boards.Select(b => b.Id));
+    }
+
+    /// <summary>Turns a parametric item into plain boards that are edited one by one (it can no longer be rebuilt).</summary>
+    public void ConvertToBoards(Guid groupId)
+    {
+        if (Project.FindGroup(groupId) is null)
+            return;
+        Execute(p =>
+        {
+            var group = p.FindGroup(groupId)!;
+            group.Wardrobe = null;
+            group.Parameters = null;
+            group.TemplateKey = "custom";
+        });
+    }
+
+    /// <summary>
+    /// The same part of the same wardrobe keeps its id when the wardrobe is rebuilt,
+    /// so the selection survives edits and undo.
+    /// </summary>
+    private static Guid WardrobeBoardId(Guid groupId, string partName)
+    {
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes($"{groupId:N}/{partName}"));
+        return new Guid(hash.AsSpan(0, 16));
+    }
+
+    private List<Board> PlaceWardrobe(Guid groupId, WardrobeDesign design, double x, double y, double z)
+    {
+        var boards = WardrobeBuilder.Build(design, Project.Materials).Boards.ToList();
+        foreach (var board in boards)
+        {
+            board.Id = WardrobeBoardId(groupId, board.Name);
+            board.GroupId = groupId;
+            board.X += x;
+            board.Y += y;
+            board.Z += z;
+        }
+        return boards;
+    }
+
     /// <summary>Adds already positioned boards (e.g. from an import) as one new item and selects them.</summary>
     public FurnitureGroup AddBoards(string name, IReadOnlyList<Board> boards, IEnumerable<BoardMaterial> newMaterials)
     {
@@ -380,12 +469,22 @@ public sealed class ProjectEditor
             {
                 if (!groupMap.TryGetValue(group.Id, out var copy))
                 {
-                    copy = new FurnitureGroup { Name = group.Name + " (copy)", TemplateKey = group.TemplateKey };
+                    // A whole item stays parametric; part of one becomes plain boards.
+                    bool whole = Project.Boards.Where(b => b.GroupId == group.Id).All(b => _selection.Contains(b.Id));
+                    copy = new FurnitureGroup
+                    {
+                        Name = group.Name + " (copy)",
+                        TemplateKey = whole ? group.TemplateKey : "custom",
+                        Parameters = whole ? group.Parameters : null,
+                        Wardrobe = whole ? group.Wardrobe?.Clone() : null,
+                    };
                     groupMap[group.Id] = copy;
                 }
                 newGroupId = copy.Id;
             }
             var clone = board.Clone(newGroupId);
+            if (newGroupId is { } copyId && groupMap.Values.First(g => g.Id == copyId).Wardrobe is not null)
+                clone.Id = WardrobeBoardId(copyId, clone.Name);
             clone.X += box.SizeX;
             copies.Add(clone);
         }
