@@ -1,0 +1,110 @@
+@using System.Text.RegularExpressions
+@* Edits a copy of a material; OnOk receives the edited copy. *@
+<Modal Title="@Title" OnCancel="OnCancel">
+    <form class="fields" @onsubmit="Ok">
+        <label>Name <input @bind="_name" autofocus /></label>
+        <label>
+            Colour (#RRGGBB)
+            <span class="color-field">
+                <input @bind="_color" @bind:event="oninput" />
+                <input type="color" value="@(IsColor(_color) ? _color.ToLowerInvariant() : "#cccccc")"
+                       @oninput="e => _color = e.Value?.ToString()?.ToUpperInvariant() ?? _color" />
+            </span>
+        </label>
+        <label>
+            Texture
+            <select @bind="_texture">
+                @foreach (var texture in Enum.GetValues<MaterialTexture>())
+                {
+                    <option value="@texture">@texture</option>
+                }
+            </select>
+        </label>
+        @if (_texture == MaterialTexture.Image)
+        {
+            <label>
+                Image file
+                <span>
+                    <InputFile accept="image/png,image/jpeg,image/webp" OnChange="LoadImage" />
+                    @if (_imagePath?.StartsWith("data:image/") == true)
+                    {
+                        <img class="image-preview" src="@_imagePath" alt="Texture" />
+                    }
+                </span>
+            </label>
+        }
+        <label>Texture tile, mm <input type="number" step="any" @bind="_tile" /></label>
+        <label>Thickness, mm <input type="number" step="any" @bind="_thickness" /></label>
+        <label>Price / m² <input type="number" step="any" @bind="_price" /></label>
+        <label>Opacity (0.1–1) <input type="number" step="0.05" @bind="_opacity" /></label>
+        <p class="hint">Wood and stone are generated from the colour. For a photo texture choose Image and pick a JPG/PNG (e.g. a scan of a decor sample); it is stored in the project file.</p>
+        @if (_error is not null)
+        {
+            <p class="error">@_error</p>
+        }
+        <div class="buttons">
+            <button type="submit" class="primary">OK</button>
+            <button type="button" @onclick="OnCancel">Cancel</button>
+        </div>
+    </form>
+</Modal>
+
+@code {
+    private const long MaxImageBytes = 4 * 1024 * 1024;
+
+    [Parameter, EditorRequired] public BoardMaterial Source { get; set; } = null!;
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public EventCallback<BoardMaterial> OnOk { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string _name = "", _color = "";
+    private MaterialTexture _texture;
+    private string? _imagePath;
+    private double _tile, _thickness, _price, _opacity;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        (_name, _color, _texture, _imagePath) = (Source.Name, Source.Color, Source.Texture, Source.ImagePath);
+        (_tile, _thickness, _price, _opacity) = (Source.TextureSize, Source.Thickness, Source.PricePerM2, Source.Opacity);
+    }
+
+    private static bool IsColor(string value) => Regex.IsMatch(value.Trim(), "^#[0-9A-Fa-f]{6}$");
+
+    private async Task LoadImage(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var stream = e.File.OpenReadStream(MaxImageBytes);
+            using var memory = new MemoryStream();
+            await stream.CopyToAsync(memory);
+            _imagePath = $"data:{e.File.ContentType};base64,{Convert.ToBase64String(memory.ToArray())}";
+            _error = null;
+        }
+        catch (IOException)
+        {
+            _error = "The image must be at most 4 MB.";
+        }
+    }
+
+    private Task Ok()
+    {
+        if (string.IsNullOrWhiteSpace(_name) || !IsColor(_color) || _tile <= 0 || _thickness <= 0 || _price < 0 || _opacity is < 0.1 or > 1)
+        {
+            _error = "Please check the values: a name, a colour like #C9A271, and positive numbers.";
+            return Task.CompletedTask;
+        }
+        return OnOk.InvokeAsync(new BoardMaterial
+        {
+            Id = Source.Id,
+            Name = _name.Trim(),
+            Color = _color.Trim().ToUpperInvariant(),
+            Texture = _texture,
+            ImagePath = string.IsNullOrWhiteSpace(_imagePath) ? null : _imagePath,
+            TextureSize = _tile,
+            Thickness = _thickness,
+            PricePerM2 = _price,
+            Opacity = _opacity,
+        });
+    }
+}

@@ -45,11 +45,26 @@ public static class FurnitureImporter
 
     public static ImportResult ImportFile(string path, ImportOptions? options = null)
     {
-        string extension = Path.GetExtension(path).ToLowerInvariant();
+        string mtl = Path.ChangeExtension(path, ".mtl");
+        bool isObj = Path.GetExtension(path).Equals(".obj", StringComparison.OrdinalIgnoreCase);
+        return Import(Path.GetFileName(path), () => File.ReadAllText(path),
+            isObj && File.Exists(mtl) ? File.ReadAllText(mtl) : null, options);
+    }
+
+    /// <summary>
+    /// Imports file contents (e.g. an upload). <paramref name="fileName"/> picks the format;
+    /// <paramref name="mtlText"/> is the .mtl material library that goes with an .obj, if any.
+    /// </summary>
+    public static ImportResult Import(string fileName, string text, string? mtlText = null, ImportOptions? options = null) =>
+        Import(fileName, () => text, mtlText, options);
+
+    private static ImportResult Import(string fileName, Func<string> readText, string? mtlText, ImportOptions? options)
+    {
+        string extension = Path.GetExtension(fileName).ToLowerInvariant();
         MeshData mesh = extension switch
         {
-            ".dxf" => DxfReader.Read(File.ReadAllText(path)),
-            ".obj" => ObjReader.Read(File.ReadAllText(path), MaterialLibrary(path)),
+            ".dxf" => DxfReader.Read(readText()),
+            ".obj" => ObjReader.Read(readText(), MaterialLibrary(mtlText)),
             ".pro" or ".prox" => throw new NotSupportedException(
                 "PRO100 project files (.pro) use a closed, undocumented format. " +
                 "In PRO100 export the project as 3D DXF (or OBJ) and import that file."),
@@ -58,15 +73,14 @@ public static class FurnitureImporter
         return BoardReconstructor.Build(mesh, options ?? new ImportOptions());
     }
 
-    /// <summary>Reads Kd colours from the .mtl file next to an .obj, if any.</summary>
-    private static IReadOnlyDictionary<string, string> MaterialLibrary(string objPath)
+    /// <summary>Reads Kd colours from the .mtl material library of an .obj, if any.</summary>
+    private static IReadOnlyDictionary<string, string> MaterialLibrary(string? mtlText)
     {
         var colors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        string mtl = Path.ChangeExtension(objPath, ".mtl");
-        if (!File.Exists(mtl))
+        if (mtlText is null)
             return colors;
         string? current = null;
-        foreach (var raw in File.ReadLines(mtl))
+        foreach (var raw in mtlText.Split('\n'))
         {
             var parts = raw.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2 && parts[0] == "newmtl")

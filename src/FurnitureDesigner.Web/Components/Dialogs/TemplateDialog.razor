@@ -1,0 +1,94 @@
+@* Sizes and options of a library item, for inserting it or rebuilding an existing one. *@
+<Modal Title="@(IsEdit ? $"Edit item: {Template.Name}" : $"Insert: {Template.Name}")" OnCancel="OnCancel">
+    <form class="fields" @onsubmit="Ok">
+        <label>Width (X) <input type="number" step="any" @bind="_width" autofocus /></label>
+        <label>Height (Y) <input type="number" step="any" @bind="_height" /></label>
+        <label>Depth (Z) <input type="number" step="any" @bind="_depth" /></label>
+        <label>Elevation <input type="number" step="any" @bind="_elevation" /></label>
+        <label>
+            @(Template.IsCabinet ? "Carcass material" : "Material")
+            <MaterialSelect Materials="Materials" @bind-Value="_carcass" />
+        </label>
+        @if (Template.IsCabinet)
+        {
+            <label>Board thickness <input type="number" step="any" @bind="_thickness" /></label>
+            <label>Plinth height <input type="number" step="any" @bind="_plinth" /></label>
+            <label>Shelves <input type="number" step="1" min="0" @bind="_shelves" /></label>
+            <label>Doors <input type="number" step="1" min="0" @bind="_doors" /></label>
+            <label title="Drawers replace the doors">Drawers <input type="number" step="1" min="0" @bind="_drawers" /></label>
+            <label>Front material <MaterialSelect Materials="Materials" @bind-Value="_front" /></label>
+            <label>
+                Front style
+                <select @bind="_frontStyle">
+                    @foreach (var style in Enum.GetValues<FrontStyle>())
+                    {
+                        <option value="@style">@style</option>
+                    }
+                </select>
+            </label>
+            <label>Back material <MaterialSelect Materials="Materials" @bind-Value="_back" /></label>
+        }
+        <p class="hint">All sizes in millimetres.</p>
+        @if (_error is not null)
+        {
+            <p class="error">@_error</p>
+        }
+        <div class="buttons">
+            <button type="submit" class="primary">@(IsEdit ? "Apply" : "Insert")</button>
+            <button type="button" @onclick="OnCancel">Cancel</button>
+        </div>
+    </form>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public FurnitureTemplate Template { get; set; } = null!;
+    [Parameter, EditorRequired] public IReadOnlyList<BoardMaterial> Materials { get; set; } = [];
+    [Parameter, EditorRequired] public TemplateParameters Start { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public EventCallback<TemplateParameters> OnOk { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private double _width, _height, _depth, _elevation, _thickness, _plinth;
+    private int _shelves, _doors, _drawers;
+    private string _carcass = "", _front = "", _back = "";
+    private FrontStyle _frontStyle;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        var s = Start;
+        (_width, _height, _depth, _elevation, _thickness, _plinth) = (s.Width, s.Height, s.Depth, s.Elevation, s.Thickness, s.Plinth);
+        (_shelves, _doors, _drawers) = (s.Shelves, s.Doors, s.Drawers);
+        (_carcass, _front, _back, _frontStyle) = (s.CarcassMaterialId, s.FrontMaterialId, s.BackMaterialId, s.FrontStyle);
+    }
+
+    private Task Ok()
+    {
+        if (_width <= 0 || _height <= 0 || _depth <= 0)
+        {
+            _error = "Width, height and depth must be greater than zero.";
+            return Task.CompletedTask;
+        }
+        if (Template.IsCabinet && (_thickness <= 0 || 2 * _thickness >= _width || _plinth + 2 * _thickness >= _height))
+        {
+            _error = "The cabinet is too small for this board thickness and plinth.";
+            return Task.CompletedTask;
+        }
+        return OnOk.InvokeAsync(Start with
+        {
+            Width = _width,
+            Height = _height,
+            Depth = _depth,
+            Elevation = _elevation,
+            Thickness = _thickness,
+            Plinth = Math.Max(0, _plinth),
+            Shelves = Math.Max(0, _shelves),
+            Doors = Math.Max(0, _doors),
+            Drawers = Math.Max(0, _drawers),
+            CarcassMaterialId = _carcass,
+            FrontMaterialId = _front,
+            BackMaterialId = _back,
+            FrontStyle = _frontStyle,
+        });
+    }
+}

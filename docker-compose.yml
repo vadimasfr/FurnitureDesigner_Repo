@@ -1,0 +1,11 @@
+# Local run: copy .env.example to .env, fill in the key, then `docker compose up --build`
+# and open http://localhost:8080
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      APP_PASSWORD: ${APP_PASSWORD:-}
+    restart: unless-stopped

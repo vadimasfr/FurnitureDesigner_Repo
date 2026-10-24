@@ -311,24 +311,8 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>Replaces the project with a small kitchen and a wardrobe, as a starting point to play with.</summary>
     public void LoadSample()
     {
-        if (!ConfirmDiscardChanges())
-            return;
-        Editor.Load(FurnitureProject.CreateDefault(), null);
-        void Add(string key, double x, Func<TemplateParameters, TemplateParameters>? adjust = null)
-        {
-            var template = TemplateLibrary.All.Single(t => t.Key == key);
-            Editor.Insert(template, adjust?.Invoke(template.Defaults) ?? template.Defaults, x, 0);
-        }
-        static TemplateParameters Cherry(TemplateParameters p) =>
-            p with { CarcassMaterialId = "cherry", FrontMaterialId = "cherry", FrontStyle = FrontStyle.RaisedPanel };
-        Add("base-2door", 0, Cherry);
-        Add("base-drawers", 800, p => Cherry(p) with { Drawers = 4 });
-        Add("base-1door", 1400, Cherry);
-        Add("countertop", 0, p => p with { Width = 1850 });
-        Add("wall-2door", 0, Cherry);
-        Add("wall-2door", 800, p => Cherry(p) with { Width = 1050, FrontStyle = FrontStyle.Glass });
-        Add("wardrobe", 2700, p => p with { FrontMaterialId = "graphite", FrontStyle = FrontStyle.Shaker });
-        Editor.ClearSelection();
+        if (ConfirmDiscardChanges())
+            Editor.LoadSample();
     }
 
     public void InsertTemplate(FurnitureTemplate? template)

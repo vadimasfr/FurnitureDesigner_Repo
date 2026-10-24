@@ -134,9 +134,36 @@ public sealed class ProjectEditor
     public void Save(string path)
     {
         ProjectSerializer.Save(Project, path);
+        MarkSaved(path);
+    }
+
+    /// <summary>Records that the project was saved elsewhere (e.g. downloaded from the web app) under this name.</summary>
+    public void MarkSaved(string path)
+    {
         FilePath = path;
         IsDirty = false;
         ProjectChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Replaces the project with a small kitchen and a wardrobe, as a starting point to play with.</summary>
+    public void LoadSample()
+    {
+        Load(FurnitureProject.CreateDefault(), null);
+        void Add(string key, double x, Func<TemplateParameters, TemplateParameters>? adjust = null)
+        {
+            var template = TemplateLibrary.All.Single(t => t.Key == key);
+            Insert(template, adjust?.Invoke(template.Defaults) ?? template.Defaults, x, 0);
+        }
+        static TemplateParameters Cherry(TemplateParameters p) =>
+            p with { CarcassMaterialId = "cherry", FrontMaterialId = "cherry", FrontStyle = FrontStyle.RaisedPanel };
+        Add("base-2door", 0, Cherry);
+        Add("base-drawers", 800, p => Cherry(p) with { Drawers = 4 });
+        Add("base-1door", 1400, Cherry);
+        Add("countertop", 0, p => p with { Width = 1850 });
+        Add("wall-2door", 0, Cherry);
+        Add("wall-2door", 800, p => Cherry(p) with { Width = 1050, FrontStyle = FrontStyle.Glass });
+        Add("wardrobe", 2700, p => p with { FrontMaterialId = "graphite", FrontStyle = FrontStyle.Shaker });
+        ClearSelection();
     }
 
     // ---- selection -----------------------------------------------------------------------

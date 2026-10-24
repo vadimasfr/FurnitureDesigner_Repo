@@ -1,0 +1,407 @@
+@page "/"
+@using FurnitureDesigner.Core.Editing
+@using FurnitureDesigner.Core.Reports
+
+<div class="app">
+    <InputFile id="open-file" class="hidden-file" accept=".fdp,.json" OnChange="OpenProject" />
+    <InputFile id="import-file" class="hidden-file" accept=".dxf,.obj,.mtl,.pro" multiple OnChange="ImportFile" />
+
+    <nav class="menubar">
+        <div class="menu" tabindex="0">
+            <span>File</span>
+            <div class="menu-items" inert="@_busy">
+                <button @onclick="NewProject">New</button>
+                <label for="open-file">Open… <kbd>Ctrl+O</kbd></label>
+                <button @onclick="SaveProject">Save (download) <kbd>Ctrl+S</kbd></button>
+                <button @onclick="LoadSample">Load sample kitchen</button>
+                <hr />
+                <label for="import-file">Import from PRO100 (3D DXF / OBJ)…</label>
+                <button @onclick="ExportCutList">Export cut list (CSV)</button>
+            </div>
+        </div>
+        <div class="menu" tabindex="0">
+            <span>Edit</span>
+            <div class="menu-items" inert="@_busy">
+                <button @onclick="Undo" disabled="@(!_editor.CanUndo)">Undo <kbd>Ctrl+Z</kbd></button>
+                <button @onclick="Redo" disabled="@(!_editor.CanRedo)">Redo <kbd>Ctrl+Y</kbd></button>
+                <hr />
+                <button @onclick="_editor.DuplicateSelection" disabled="@(!HasSelection)">Duplicate <kbd>Ctrl+D</kbd></button>
+                <button @onclick="_editor.RotateSelection" disabled="@(!HasSelection)">Rotate 90° <kbd>R</kbd></button>
+                <button @onclick="_editor.DeleteSelection" disabled="@(!HasSelection)">Delete <kbd>Del</kbd></button>
+                <button @onclick="OpenEditItemDialog" disabled="@(SelectedGroup?.Parameters is null)">Edit item sizes…</button>
+                <hr />
+                <button @onclick="_editor.SelectAll">Select all <kbd>Ctrl+A</kbd></button>
+            </div>
+        </div>
+        <div class="menu" tabindex="0">
+            <span>View</span>
+            <div class="menu-items">
+                <button @onclick='() => ViewCommand("3d")'>3D view <kbd>F5</kbd></button>
+                <button @onclick='() => ViewCommand("front")'>Front <kbd>F6</kbd></button>
+                <button @onclick='() => ViewCommand("top")'>Top <kbd>F7</kbd></button>
+                <button @onclick='() => ViewCommand("left")'>Left <kbd>F8</kbd></button>
+                <button @onclick='() => ViewCommand("right")'>Right</button>
+                <hr />
+                <button class="check @(_orthographic ? "on" : "")" @onclick='() => ViewCommand("toggleOrtho")'>Orthographic</button>
+                <button class="check @(_showEdges ? "on" : "")" @onclick="() => _showEdges = !_showEdges">Show edges</button>
+                <button class="check @(_showDimensions ? "on" : "")" @onclick="() => _showDimensions = !_showDimensions">Show dimensions</button>
+                <button @onclick='() => ViewCommand("zoomRoom")'>Zoom to room <kbd>Home</kbd></button>
+            </div>
+        </div>
+        <div class="menu" tabindex="0">
+            <span>Help</span>
+            <div class="menu-items">
+                <button @onclick="() => _showHelp = true">Controls <kbd>F1</kbd></button>
+            </div>
+        </div>
+        <span class="menubar-title">@FileName@(_editor.IsDirty ? " *" : "")</span>
+    </nav>
+
+    <div class="toolbars" inert="@_busy">
+        <div class="toolbar">
+            <button title="New project" @onclick="NewProject"><Icon Name="new" /></button>
+            <label class="button" title="Open (Ctrl+O)" for="open-file"><Icon Name="open" /></label>
+            <button title="Save / download (Ctrl+S)" @onclick="SaveProject"><Icon Name="save" /></button>
+            <label class="button" title="Import from PRO100 (3D DXF / OBJ)" for="import-file"><Icon Name="import" /></label>
+        </div>
+        <div class="toolbar">
+            <button title="Undo (Ctrl+Z)" @onclick="Undo" disabled="@(!_editor.CanUndo)"><Icon Name="undo" /></button>
+            <button title="Redo (Ctrl+Y)" @onclick="Redo" disabled="@(!_editor.CanRedo)"><Icon Name="redo" /></button>
+            <span class="separator"></span>
+            <button title="Duplicate (Ctrl+D)" @onclick="_editor.DuplicateSelection" disabled="@(!HasSelection)"><Icon Name="duplicate" /></button>
+            <button title="Rotate 90° (R)" @onclick="_editor.RotateSelection" disabled="@(!HasSelection)"><Icon Name="rotate" /></button>
+            <button title="Delete (Del)" @onclick="_editor.DeleteSelection" disabled="@(!HasSelection)"><Icon Name="delete" /></button>
+            <button title="Edit item sizes" @onclick="OpenEditItemDialog" disabled="@(SelectedGroup?.Parameters is null)"><Icon Name="edit" /></button>
+        </div>
+        <div class="toolbar">
+            <button title="3D view (F5)" class="view-label" @onclick='() => ViewCommand("3d")'>3D</button>
+            <button title="Front view (F6)" class="view-label" @onclick='() => ViewCommand("front")'>F</button>
+            <button title="Top view / plan (F7)" class="view-label" @onclick='() => ViewCommand("top")'>T</button>
+            <button title="Left view (F8)" class="view-label" @onclick='() => ViewCommand("left")'>L</button>
+            <button title="Right view" class="view-label" @onclick='() => ViewCommand("right")'>R</button>
+            <span class="separator"></span>
+            <button title="Zoom to room (Home)" @onclick='() => ViewCommand("zoomRoom")'><Icon Name="fit" /></button>
+            <button title="Zoom in" @onclick='() => ViewCommand("zoomIn")'><Icon Name="zoom-in" /></button>
+            <button title="Zoom out" @onclick='() => ViewCommand("zoomOut")'><Icon Name="zoom-out" /></button>
+        </div>
+        <div class="toolbar">
+            <button title="Align left edges" @onclick="() => Align(AlignMode.Left)" disabled="@(!HasSelection)"><Icon Name="align-left" /></button>
+            <button title="Align right edges" @onclick="() => Align(AlignMode.Right)" disabled="@(!HasSelection)"><Icon Name="align-right" /></button>
+            <button title="Align tops" @onclick="() => Align(AlignMode.Top)" disabled="@(!HasSelection)"><Icon Name="align-top" /></button>
+            <button title="Align bottoms" @onclick="() => Align(AlignMode.Bottom)" disabled="@(!HasSelection)"><Icon Name="align-bottom" /></button>
+            <button title="Align backs" @onclick="() => Align(AlignMode.Back)" disabled="@(!HasSelection)"><Icon Name="align-back" /></button>
+            <button title="Align fronts" @onclick="() => Align(AlignMode.Front)" disabled="@(!HasSelection)"><Icon Name="align-front" /></button>
+            <span class="separator"></span>
+            <button title="Push against the back wall" @onclick="() => Align(AlignMode.BackWall)" disabled="@(!HasSelection)"><Icon Name="to-wall" /></button>
+            <button title="Put on the floor" @onclick="() => Align(AlignMode.Floor)" disabled="@(!HasSelection)"><Icon Name="to-floor" /></button>
+        </div>
+        <div class="toolbar">
+            <label title="Click selects the whole cabinet; Alt+click selects a single board">
+                <input type="checkbox" @bind="_selectWholeGroup" /> Select whole items
+            </label>
+            <span class="separator"></span>
+            <label title="Grid snap for mouse moves, mm (0 = off)">
+                Snap <input class="small" type="number" min="0" step="any" value="@F(_snap)"
+                            @onchange="e => { if (TryNumber(e, out var v)) _snap = Math.Max(0, v); }" />
+            </label>
+            <label title="Arrow-key step, mm (Shift = ×10)">
+                Step <input class="small" type="number" min="1" step="any" value="@F(_step)"
+                            @onchange="e => { if (TryNumber(e, out var v)) _step = Math.Max(1, v); }" />
+            </label>
+        </div>
+        <div class="toolbar">
+            <span>Material</span>
+            @if (CurrentMaterial is { } current)
+            {
+                <span class="swatch small" data-swatch data-id="@current.Id" data-color="@current.Color" data-texture="@current.Texture"
+                      data-image="@(current.Texture == MaterialTexture.Image ? current.ImagePath : null)"></span>
+                <span class="material-name">@current.Name</span>
+            }
+            <button title="Give the selection this material" @onclick="ApplyMaterial" disabled="@(!HasSelection || CurrentMaterial is null)"><Icon Name="paint" /></button>
+        </div>
+    </div>
+
+    <main class="workspace">
+        <aside class="tool-palette" inert="@_busy">
+            <button class="@(_tool == DesignTool.Select ? "active" : "")" title="Select and move (S)" @onclick="() => _tool = DesignTool.Select"><Icon Name="cursor" /></button>
+            <button class="@(_tool == DesignTool.Paint ? "active" : "")" title="Paint with the current material (P)" @onclick="() => _tool = DesignTool.Paint"><Icon Name="paint" /></button>
+            <button class="@(_tool == DesignTool.Eyedropper ? "active" : "")" title="Pick up a material (I)" @onclick="() => _tool = DesignTool.Eyedropper"><Icon Name="eyedropper" /></button>
+            <button class="@(_tool == DesignTool.Measure ? "active" : "")" title="Measure a distance (M)" @onclick="() => _tool = DesignTool.Measure"><Icon Name="ruler" /></button>
+            <hr />
+            <button title="Zoom to room" @onclick='() => ViewCommand("zoomRoom")'><Icon Name="fit" /></button>
+            <button title="Reset 3D view" class="view-label" @onclick='() => ViewCommand("3d")'>3D</button>
+        </aside>
+
+        <section class="center">
+            <div class="viewport" tabindex="0" @ref="_viewportHost">
+                <div class="viewport-canvas"></div>
+                <div class="viewport-overlay"></div>
+                <div class="viewport-name"></div>
+            </div>
+
+            <div class="bottom-panel">
+                <div class="tabs">
+                    <button class="@(_bottomTab == "cutlist" ? "active" : "")" @onclick='() => _bottomTab = "cutlist"'>Cut list</button>
+                    <button class="@(_bottomTab == "costs" ? "active" : "")" @onclick='() => _bottomTab = "costs"'>Costs</button>
+                    <button class="@(_bottomTab == "materials" ? "active" : "")" @onclick='() => _bottomTab = "materials"'>Materials</button>
+                </div>
+                <div class="tab-body @(_bottomTab == "cutlist" ? "" : "hidden")">
+                    <table>
+                        <thead><tr><th>Material</th><th>Length</th><th>Width</th><th>Thickness</th><th>Qty</th><th>Area m²</th><th>Parts</th></tr></thead>
+                        <tbody>
+                            @foreach (var row in ProjectReports.CutList(_editor.Project))
+                            {
+                                <tr><td>@row.Material</td><td>@F(row.Length)</td><td>@F(row.Width)</td><td>@F(row.Thickness)</td><td>@row.Quantity</td><td>@row.AreaM2.ToString(Inv)</td><td class="wide">@row.Parts</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="tab-body @(_bottomTab == "costs" ? "" : "hidden")">
+                    @{ var costs = ProjectReports.Costs(_editor.Project); }
+                    <table>
+                        <thead><tr><th>Material</th><th>Area m²</th><th>Price / m²</th><th>Cost</th></tr></thead>
+                        <tbody>
+                            @foreach (var row in costs)
+                            {
+                                <tr><td>@row.Material</td><td>@row.AreaM2.ToString(Inv)</td><td>@row.PricePerM2.ToString("N2", Inv)</td><td>@row.Cost.ToString("N2", Inv)</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                    <p class="total">Total: @costs.Sum(c => c.Cost).ToString("N2", Inv)</p>
+                </div>
+                <div class="tab-body @(_bottomTab == "materials" ? "" : "hidden")" inert="@_busy">
+                    <table class="editable">
+                        <thead><tr><th>Id</th><th>Name</th><th></th><th>Colour</th><th>Texture</th><th>Opacity</th><th>Thickness</th><th>Price / m²</th></tr></thead>
+                        <tbody>
+                            @foreach (var m in _editor.Project.Materials)
+                            {
+                                var id = m.Id;
+                                <tr @key="id">
+                                    <td>@id</td>
+                                    <td><input value="@m.Name" @onchange="e => EditMaterial(id, x => x.Name = e.Value?.ToString() ?? x.Name)" /></td>
+                                    <td><span class="swatch small" data-swatch data-id="@m.Id" data-color="@m.Color" data-texture="@m.Texture"
+                                              data-image="@(m.Texture == MaterialTexture.Image ? m.ImagePath : null)"></span></td>
+                                    <td><input class="color" value="@m.Color" @onchange="e => EditMaterial(id, x => x.Color = e.Value?.ToString()?.Trim() ?? x.Color)" /></td>
+                                    <td>@m.Texture</td>
+                                    <td><input class="small" type="number" step="0.05" value="@m.Opacity.ToString(Inv)" @onchange="e => EditMaterialNumber(id, e, (x, v) => x.Opacity = v, 0.1, 1)" /></td>
+                                    <td><input class="small" type="number" step="any" value="@F(m.Thickness)" @onchange="e => EditMaterialNumber(id, e, (x, v) => x.Thickness = v, 0.1)" /></td>
+                                    <td><input class="small" type="number" step="any" value="@m.PricePerM2.ToString(Inv)" @onchange="e => EditMaterialNumber(id, e, (x, v) => x.PricePerM2 = v, 0)" /></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <aside class="side-panel">
+            <div class="tabs">
+                <button class="@(_rightTab == "catalog" ? "active" : "")" @onclick='() => _rightTab = "catalog"'>Catalog</button>
+                <button class="@(_rightTab == "structure" ? "active" : "")" @onclick='() => _rightTab = "structure"'>Structure</button>
+                <button class="@(_rightTab == "properties" ? "active" : "")" @onclick='() => _rightTab = "properties"'>Properties</button>
+                <button class="@(_rightTab == "ai" ? "active" : "")" @onclick='() => _rightTab = "ai"'>AI</button>
+            </div>
+
+            <div class="tab-body catalog @(_rightTab == "catalog" ? "" : "hidden")" inert="@_busy">
+                <div class="tabs sub">
+                    <button class="@(_catalogTab == "cabinets" ? "active" : "")" @onclick='() => _catalogTab = "cabinets"'>Cabinets</button>
+                    <button class="@(_catalogTab == "textures" ? "active" : "")" @onclick='() => _catalogTab = "textures"'>Textures</button>
+                </div>
+                <div class="@(_catalogTab == "cabinets" ? "" : "hidden")">
+                    @foreach (var category in TemplateLibrary.All.GroupBy(t => t.Category))
+                    {
+                        <h3>@category.Key</h3>
+                        <div class="grid">
+                            @foreach (var t in category)
+                            {
+                                <div class="catalog-item @(_selectedTemplate == t ? "active" : "")" draggable="true" data-template="@t.Key" title="@t.Name"
+                                     @onclick="() => _selectedTemplate = t" @ondblclick="() => OpenInsertDialog(t)">
+                                    <img data-thumb="@t.Key" alt="" width="120" height="104" />
+                                    <span>@t.Name</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    <p class="hint">Drag an item into the room, or double-click it to set its sizes first.</p>
+                    <button @onclick="() => OpenInsertDialog(_selectedTemplate)" disabled="@(_selectedTemplate is null)">Insert…</button>
+                </div>
+                <div class="@(_catalogTab == "textures" ? "" : "hidden")">
+                    <div class="grid">
+                        @foreach (var m in _editor.Project.Materials)
+                        {
+                            var id = m.Id;
+                            <div class="palette-item @(_currentMaterialId == id ? "active" : "")" title="@m.Name"
+                                 @onclick="() => _currentMaterialId = id" @ondblclick="ApplyMaterial">
+                                <span class="swatch" data-swatch data-id="@m.Id" data-color="@m.Color" data-texture="@m.Texture"
+                                      data-image="@(m.Texture == MaterialTexture.Image ? m.ImagePath : null)"></span>
+                                <span>@m.Name</span>
+                            </div>
+                        }
+                    </div>
+                    <p class="hint">Pick a material, then use the paint tool on boards, or apply it to the selection. Double-click a swatch to apply.</p>
+                    <div class="buttons left">
+                        <button @onclick="ApplyMaterial" disabled="@(!HasSelection || CurrentMaterial is null)">Apply to selection</button>
+                        <button @onclick="OpenNewMaterialDialog">New…</button>
+                        <button @onclick="OpenEditMaterialDialog" disabled="@(CurrentMaterial is null)">Edit…</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-body structure @(_rightTab == "structure" ? "" : "hidden")" inert="@_busy">
+                <ul>
+                    @foreach (var node in Structure())
+                    {
+                        <li>
+                            <button class="node" @onclick="() => _editor.Select(node.BoardIds)"><b>@node.Name</b> <small>@node.Info</small></button>
+                            @if (node.Children.Count > 0)
+                            {
+                                <details>
+                                    <summary>@node.Children.Count boards</summary>
+                                    <ul>
+                                        @foreach (var child in node.Children)
+                                        {
+                                            <li><button class="node" @onclick="() => _editor.Select(child.BoardIds)">@child.Name <small>@child.Info</small></button></li>
+                                        }
+                                    </ul>
+                                </details>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+
+            <div class="tab-body properties @(_rightTab == "properties" ? "" : "hidden")" inert="@_busy">
+                <h3>Selection</h3>
+                <p class="muted">@SelectionText</p>
+                @if (SelectedBoard is { } board)
+                {
+                    var boardId = board.Id;
+                    var group = _editor.Project.FindGroup(board.GroupId);
+                    <div class="fields" @key="boardId">
+                        <h3>Board</h3>
+                        <label>
+                            Item
+                            @if (group is not null)
+                            {
+                                <input value="@group.Name" @onchange="e => EditGroupName(group.Id, e)" />
+                            }
+                            else
+                            {
+                                <span>(none)</span>
+                            }
+                        </label>
+                        <label>Name <input value="@board.Name" @onchange="e => EditBoard(boardId, b => b.Name = e.Value?.ToString() ?? b.Name)" /></label>
+                        <label>Type <span>@board.Kind</span></label>
+                        <label>
+                            Material
+                            <MaterialSelect Materials="_editor.Project.Materials" Value="@board.MaterialId"
+                                            ValueChanged="id => EditBoard(boardId, b => b.MaterialId = id)" />
+                        </label>
+                        <label>X <input type="number" step="any" value="@F(board.X)" @onchange="e => EditBoardNumber(boardId, e, (b, v) => b.X = v)" /></label>
+                        <label>Y (height) <input type="number" step="any" value="@F(board.Y)" @onchange="e => EditBoardNumber(boardId, e, (b, v) => b.Y = v)" /></label>
+                        <label>Z <input type="number" step="any" value="@F(board.Z)" @onchange="e => EditBoardNumber(boardId, e, (b, v) => b.Z = v)" /></label>
+                        <label>Width <input type="number" step="any" value="@F(board.SizeX)" @onchange="e => EditBoardNumber(boardId, e, (b, v) => b.SizeX = v, positive: true)" /></label>
+                        <label>Height <input type="number" step="any" value="@F(board.SizeY)" @onchange="e => EditBoardNumber(boardId, e, (b, v) => b.SizeY = v, positive: true)" /></label>
+                        <label>Depth <input type="number" step="any" value="@F(board.SizeZ)" @onchange="e => EditBoardNumber(boardId, e, (b, v) => b.SizeZ = v, positive: true)" /></label>
+                        <p class="hint">Shows one board of the selection. Alt+click a board to edit a different one.</p>
+                        <button @onclick="OpenEditItemDialog" disabled="@(group?.Parameters is null)"
+                                title="Change width, height, shelves, doors, front style… of a library item and rebuild it in place">Edit item sizes…</button>
+                    </div>
+                }
+                <div class="fields">
+                    <h3>Room</h3>
+                    <label>Width <input type="number" step="any" value="@F(_editor.Project.Room.Width)" @onchange="e => EditRoom(e, (r, v) => r.Width = v)" /></label>
+                    <label>Depth <input type="number" step="any" value="@F(_editor.Project.Room.Depth)" @onchange="e => EditRoom(e, (r, v) => r.Depth = v)" /></label>
+                    <label>Height <input type="number" step="any" value="@F(_editor.Project.Room.Height)" @onchange="e => EditRoom(e, (r, v) => r.Height = v)" /></label>
+                </div>
+            </div>
+
+            <div class="tab-body ai @(_rightTab == "ai" ? "" : "hidden")">
+                <p class="hint">Describe a change, e.g. “add a 600 mm drawer cabinet right of the sink and make all fronts cherry raised panel”. One Ctrl+Z undoes everything the AI did for a request.</p>
+                <div class="chat">
+                    @foreach (var entry in _chat)
+                    {
+                        <div class="chat-entry @(entry.IsTool ? "tool" : "")">
+                            <div class="who">@entry.Who</div>
+                            <div class="text">@entry.Text</div>
+                        </div>
+                    }
+                </div>
+                @if (_busy)
+                {
+                    <p class="working">Claude is working…</p>
+                }
+                <textarea id="ai-input" rows="3" placeholder="Enter sends, Shift+Enter for a new line"
+                          @bind="_assistantInput" @bind:event="oninput"></textarea>
+                <div class="buttons">
+                    <button @onclick="NewChat" disabled="@_busy">New chat</button>
+                    <button @onclick="CancelAssistant" disabled="@(!_busy)">Stop</button>
+                    <button id="ai-send" class="primary" @onclick="SendToAssistant" disabled="@(_busy || string.IsNullOrWhiteSpace(_assistantInput))">Send</button>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <footer class="statusbar">
+        <span>@SelectionText</span>
+        <span>@Summary</span>
+        <span id="camera-status"></span>
+        <span class="hint-text">@ToolHint</span>
+    </footer>
+</div>
+
+@if (_templateDialog is { } templateDialog)
+{
+    <TemplateDialog Template="templateDialog.Template" Materials="_editor.Project.Materials" Start="templateDialog.Start"
+                    IsEdit="templateDialog.GroupId is not null" OnOk="OnTemplateDialogOk" OnCancel="() => _templateDialog = null" />
+}
+@if (_materialDialog is { } materialDialog)
+{
+    <MaterialDialog Source="materialDialog.Material" Title="@materialDialog.Title" OnOk="OnMaterialDialogOk" OnCancel="() => _materialDialog = null" />
+}
+@if (_message is { } message)
+{
+    <Modal Title="@message.Title" OnCancel="() => _message = null">
+        <p class="message">@message.Text</p>
+        <div class="buttons"><button class="primary" @onclick="() => _message = null" autofocus>OK</button></div>
+    </Modal>
+}
+@if (_confirm is not null)
+{
+    <Modal Title="Furniture Designer" OnCancel="() => AnswerConfirm(null)">
+        <p class="message">@_confirmText</p>
+        <div class="buttons">
+            <button class="primary" @onclick="() => AnswerConfirm(true)">Save</button>
+            <button @onclick="() => AnswerConfirm(false)">Don't save</button>
+            <button @onclick="() => AnswerConfirm(null)">Cancel</button>
+        </div>
+    </Modal>
+}
+@if (_showHelp)
+{
+    <Modal Title="Controls" OnCancel="() => _showHelp = false">
+        <pre class="help">Tools (left palette, 3D view focused)
+  S  Select / move         P  Paint with the current material (Shift: whole item)
+  I  Eyedropper            M  Measure (click two points; Esc clears)
+
+Mouse (3D view)
+  Left click            select an item (Alt: single board, Ctrl: add/remove)
+  Left drag             move the selection on the floor plane
+  Shift + left drag     move the selection up/down
+  Right drag            orbit
+  Middle / Shift+right  pan
+  Wheel                 zoom
+  Catalog → room        drag a cabinet into the room to place it
+
+Keyboard (3D view focused)
+  Arrows                move along X / Z by Step (Shift ×10)
+  PgUp / PgDn           move up / down
+  R                     rotate 90°
+  Del                   delete
+  Ctrl+D                duplicate
+  Ctrl+Z / Ctrl+Y       undo / redo
+  Ctrl+S / Ctrl+O       save (download) / open
+  F5 3D · F6 front · F7 top · F8 left · Home zoom to room</pre>
+        <div class="buttons"><button class="primary" @onclick="() => _showHelp = false">Close</button></div>
+    </Modal>
+}

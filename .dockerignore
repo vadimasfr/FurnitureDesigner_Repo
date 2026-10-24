@@ -1,0 +1,8 @@
+**/bin/
+**/obj/
+**/.vs/
+**/*.user
+.git/
+.env
+src/FurnitureDesigner.App/
+tests/

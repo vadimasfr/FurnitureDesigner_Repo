@@ -1,0 +1,17 @@
+@* A centred dialog over the page. Escape or the backdrop cancels. *@
+<div class="modal-backdrop" @onclick="Cancel">
+    <div class="modal" role="dialog" aria-label="@Title" @onclick:stopPropagation="true" @onkeydown="OnKeyDown">
+        <h2>@Title</h2>
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private Task Cancel() => OnCancel.InvokeAsync();
+
+    private Task OnKeyDown(KeyboardEventArgs e) => e.Key == "Escape" ? Cancel() : Task.CompletedTask;
+}

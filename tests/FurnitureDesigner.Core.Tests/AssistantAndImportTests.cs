@@ -244,6 +244,19 @@ public class ImportTests
     }
 
     [Fact]
+    public void Upload_ReadsObjWithItsMaterialLibrary()
+    {
+        var obj = "v 0 0 0\nv 18 0 0\nv 18 720 0\nv 0 720 0\nv 0 0 560\nv 18 0 560\nv 18 720 560\nv 0 720 560\n" +
+                  "usemtl Red\nf 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 4 3 7 8\nf 1 4 8 5\nf 2 3 7 6\n";
+        var mtl = "newmtl Red\r\nKd 1 0 0\r\n";
+
+        var result = FurnitureImporter.Import("cabinet.obj", obj, mtl);
+
+        Assert.Single(result.Boards);
+        Assert.Equal("#FF0000", Assert.Single(result.Materials).Color);
+    }
+
+    [Fact]
     public void FlatDrawing_IsReportedNotImported()
     {
         var obj = "v 0 0 0\nv 1 0 0\nv 1 1 0\nf 1 2 3\n";

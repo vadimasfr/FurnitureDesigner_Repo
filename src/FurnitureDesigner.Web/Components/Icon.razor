@@ -1,0 +1,51 @@
+@* Toolbar icons. Drawing-tool icons are the desktop app's vector paths (filled); the rest are simple stroked outlines. *@
+@if (Filled.TryGetValue(Name, out var filled))
+{
+    <svg class="icon" viewBox="0 0 21 21" aria-hidden="true">
+        <path d="@filled.Path" fill="currentColor" stroke="@(filled.Stroke ? "currentColor" : "none")" stroke-width="1" />
+    </svg>
+}
+else
+{
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"
+         stroke-linecap="round" stroke-linejoin="round">
+        <path d="@Outlined.GetValueOrDefault(Name, "")" />
+    </svg>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = "";
+
+    private static readonly Dictionary<string, (string Path, bool Stroke)> Filled = new()
+    {
+        ["cursor"] = ("M3,1 L3,17 L7,13 L10,19 L12.5,18 L9.5,12 L15,12 Z", false),
+        ["paint"] = ("M8,2 L16,10 L10,16 C9,17 8,17 7,16 L2,11 C1,10 1,9 2,8 Z M5,9 L13,9 L8,4 Z M17,12 C17,12 19.5,15.5 19.5,17 C19.5,18.4 18.4,19.5 17,19.5 C15.6,19.5 14.5,18.4 14.5,17 C14.5,15.5 17,12 17,12 Z", false),
+        ["eyedropper"] = ("M15.5,1.5 C16.5,0.5 18.5,0.5 19.5,1.5 C20.5,2.5 20.5,4.5 19.5,5.5 L17,8 L18,9 L16.5,10.5 L10.5,4.5 L12,3 L13,4 Z M10,6 L15,11 L6.5,19.5 L3,20 L1.5,18.5 L2,15 Z", false),
+        ["ruler"] = ("M1,14 L14,1 L20,7 L7,20 Z M5,13 L6.5,14.5 M8,10 L10.5,12.5 M11,7 L12.5,8.5 M14,4 L16.5,6.5", true),
+        ["align-left"] = ("M1,1 H3 V19 H1 Z M4,4 H17 V8 H4 Z M4,11 H12 V15 H4 Z", false),
+        ["align-right"] = ("M17,1 H19 V19 H17 Z M3,4 H16 V8 H3 Z M8,11 H16 V15 H8 Z", false),
+        ["align-top"] = ("M1,1 H19 V3 H1 Z M4,4 H8 V17 H4 Z M11,4 H15 V12 H11 Z", false),
+        ["align-bottom"] = ("M1,17 H19 V19 H1 Z M4,3 H8 V16 H4 Z M11,8 H15 V16 H11 Z", false),
+        ["align-back"] = ("M1,1 H19 V3 H1 Z M3,5 H17 L15,9 H5 Z M5,11 H15 V17 H5 Z", false),
+        ["align-front"] = ("M1,17 H19 V19 H1 Z M5,3 H15 V9 H5 Z M5,11 H15 L17,15 H3 Z", false),
+        ["to-wall"] = ("M1,1 H19 V4 H1 Z M3,1 L5,4 M7,1 L9,4 M11,1 L13,4 M15,1 L17,4 M6,8 H14 V18 H6 Z M10,5 L13,8 H7 Z", true),
+        ["to-floor"] = ("M1,16 H19 V19 H1 Z M6,2 H14 V10 H6 Z M10,15 L7,12 H13 Z", false),
+    };
+
+    private static readonly Dictionary<string, string> Outlined = new()
+    {
+        ["new"] = "M6 2h9l5 5v15H6z M15 2v5h5",
+        ["open"] = "M3 6h6l2 2h10v11H3z",
+        ["save"] = "M5 3h12l4 4v14H5z M8 3v5h8V3 M8 21v-7h8v7",
+        ["import"] = "M12 3v12 M7 10l5 5 5-5 M4 17v4h16v-4",
+        ["undo"] = "M9 14 4 9l5-5 M4 9h11a5 5 0 0 1 0 10h-3",
+        ["redo"] = "M15 14l5-5-5-5 M20 9H9a5 5 0 0 0 0 10h3",
+        ["duplicate"] = "M8 8h12v12H8z M4 16V4h12",
+        ["rotate"] = "M20 12a8 8 0 1 1-2.3-5.7 M20 4v5h-5",
+        ["delete"] = "M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13",
+        ["edit"] = "M4 20h4L19 9l-4-4L4 16z M14 6l4 4",
+        ["fit"] = "M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5",
+        ["zoom-in"] = "M10 4a6 6 0 1 0 0 12a6 6 0 1 0 0-12 M10 7v6 M7 10h6 M15 15l5 5",
+        ["zoom-out"] = "M10 4a6 6 0 1 0 0 12a6 6 0 1 0 0-12 M7 10h6 M15 15l5 5",
+    };
+}
