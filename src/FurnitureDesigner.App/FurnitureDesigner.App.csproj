@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>FurnitureDesigner.App</RootNamespace>
+    <AssemblyName>FurnitureDesigner</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FurnitureDesigner.Core\FurnitureDesigner.Core.csproj" />
+    <ProjectReference Include="..\FurnitureDesigner.Ai\FurnitureDesigner.Ai.csproj" />
+  </ItemGroup>
+
+</Project>

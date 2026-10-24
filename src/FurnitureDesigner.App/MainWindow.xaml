@@ -1,0 +1,467 @@
+<Window x:Class="FurnitureDesigner.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:FurnitureDesigner.App.ViewModels"
+        Title="{Binding Title}" Height="900" Width="1500" WindowStartupLocation="CenterScreen"
+        Background="#FFF0F0F0" PreviewKeyDown="OnPreviewKeyDown" Closing="OnClosing">
+    <Window.Resources>
+        <Style x:Key="PaletteRadio" TargetType="RadioButton" BasedOn="{StaticResource {x:Static ToolBar.RadioButtonStyleKey}}">
+            <Setter Property="Margin" Value="1,2" />
+            <Setter Property="Padding" Value="4" />
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" Command="{Binding NewCommand}" InputGestureText="Ctrl+N" />
+                <MenuItem Header="_Open…" Command="{Binding OpenCommand}" InputGestureText="Ctrl+O" />
+                <MenuItem Header="_Save" Command="{Binding SaveCommand}" InputGestureText="Ctrl+S" />
+                <MenuItem Header="Save _as…" Command="{Binding SaveAsCommand}" />
+                <MenuItem Header="Load sample _kitchen" Click="OnLoadSample" />
+                <Separator />
+                <MenuItem Header="_Import from PRO100 (3D DXF / OBJ)…" Command="{Binding ImportCommand}" />
+                <MenuItem Header="Export _cut list (CSV)…" Command="{Binding ExportCutListCommand}" />
+                <Separator />
+                <MenuItem Header="E_xit" Click="OnExit" />
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Undo" Command="{Binding UndoCommand}" InputGestureText="Ctrl+Z" />
+                <MenuItem Header="_Redo" Command="{Binding RedoCommand}" InputGestureText="Ctrl+Y" />
+                <Separator />
+                <MenuItem Header="_Duplicate" Command="{Binding DuplicateCommand}" InputGestureText="Ctrl+D" />
+                <MenuItem Header="R_otate 90°" Command="{Binding RotateCommand}" InputGestureText="R" />
+                <MenuItem Header="De_lete" Command="{Binding DeleteCommand}" InputGestureText="Del" />
+                <MenuItem Header="Edit item _sizes…" Command="{Binding EditItemCommand}" />
+                <Separator />
+                <MenuItem Header="Select _all" Command="{Binding SelectAllCommand}" InputGestureText="Ctrl+A" />
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_3D view" Click="OnView3D" InputGestureText="F5" />
+                <MenuItem Header="_Front" Click="OnViewFront" InputGestureText="F6" />
+                <MenuItem Header="_Top" Click="OnViewTop" InputGestureText="F7" />
+                <MenuItem Header="_Left" Click="OnViewLeft" InputGestureText="F8" />
+                <MenuItem Header="_Right" Click="OnViewRight" />
+                <Separator />
+                <MenuItem x:Name="OrthoMenu" Header="_Orthographic" IsCheckable="True" Click="OnToggleOrtho" />
+                <MenuItem x:Name="EdgesMenu" Header="Show _edges" IsCheckable="True" IsChecked="True" Click="OnToggleEdges" />
+                <MenuItem x:Name="DimensionsMenu" Header="Show _dimensions" IsCheckable="True" IsChecked="True" Click="OnToggleDimensions" />
+                <MenuItem Header="_Zoom to room" Click="OnZoomToRoom" InputGestureText="Home" />
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_Controls" Click="OnShowHelp" InputGestureText="F1" />
+            </MenuItem>
+        </Menu>
+
+        <!-- Toolbars, PRO100 style: icon buttons in rows. -->
+        <ToolBarTray DockPanel.Dock="Top" IsEnabled="{Binding IsEditingEnabled}">
+            <ToolBar Band="0" BandIndex="0">
+                <Button Command="{Binding NewCommand}" ToolTip="New project (Ctrl+N)"><TextBlock Style="{StaticResource Glyph}" Text="&#xE8A5;" /></Button>
+                <Button Command="{Binding OpenCommand}" ToolTip="Open (Ctrl+O)"><TextBlock Style="{StaticResource Glyph}" Text="&#xE8E5;" /></Button>
+                <Button Command="{Binding SaveCommand}" ToolTip="Save (Ctrl+S)"><TextBlock Style="{StaticResource Glyph}" Text="&#xE74E;" /></Button>
+                <Button Command="{Binding ImportCommand}" ToolTip="Import from PRO100 (3D DXF / OBJ)"><TextBlock Style="{StaticResource Glyph}" Text="&#xE8B5;" /></Button>
+            </ToolBar>
+            <ToolBar Band="0" BandIndex="1">
+                <Button Command="{Binding UndoCommand}" ToolTip="Undo (Ctrl+Z)"><TextBlock Style="{StaticResource Glyph}" Text="&#xE7A7;" /></Button>
+                <Button Command="{Binding RedoCommand}" ToolTip="Redo (Ctrl+Y)"><TextBlock Style="{StaticResource Glyph}" Text="&#xE7A6;" /></Button>
+                <Separator />
+                <Button Command="{Binding DuplicateCommand}" ToolTip="Duplicate (Ctrl+D)"><TextBlock Style="{StaticResource Glyph}" Text="&#xE8C8;" /></Button>
+                <Button Command="{Binding RotateCommand}" ToolTip="Rotate 90° (R)"><TextBlock Style="{StaticResource Glyph}" Text="&#xE7AD;" /></Button>
+                <Button Command="{Binding DeleteCommand}" ToolTip="Delete (Del)"><TextBlock Style="{StaticResource Glyph}" Text="&#xE74D;" /></Button>
+                <Button Command="{Binding EditItemCommand}" ToolTip="Edit item sizes"><TextBlock Style="{StaticResource Glyph}" Text="&#xE70F;" /></Button>
+            </ToolBar>
+            <ToolBar Band="0" BandIndex="2">
+                <Button Click="OnView3D" ToolTip="3D view (F5)"><TextBlock Style="{StaticResource ViewLabel}" Text="3D" /></Button>
+                <Button Click="OnViewFront" ToolTip="Front view (F6)"><TextBlock Style="{StaticResource ViewLabel}" Text="F" /></Button>
+                <Button Click="OnViewTop" ToolTip="Top view / plan (F7)"><TextBlock Style="{StaticResource ViewLabel}" Text="T" /></Button>
+                <Button Click="OnViewLeft" ToolTip="Left view (F8)"><TextBlock Style="{StaticResource ViewLabel}" Text="L" /></Button>
+                <Button Click="OnViewRight" ToolTip="Right view"><TextBlock Style="{StaticResource ViewLabel}" Text="R" /></Button>
+                <Separator />
+                <Button Click="OnZoomToRoom" ToolTip="Zoom to room (Home)"><TextBlock Style="{StaticResource Glyph}" Text="&#xE740;" /></Button>
+                <Button Click="OnZoomIn" ToolTip="Zoom in"><TextBlock Style="{StaticResource Glyph}" Text="&#xE8A3;" /></Button>
+                <Button Click="OnZoomOut" ToolTip="Zoom out"><TextBlock Style="{StaticResource Glyph}" Text="&#xE71F;" /></Button>
+            </ToolBar>
+            <ToolBar Band="1" BandIndex="0">
+                <Button Command="{Binding AlignCommand}" CommandParameter="Left" ToolTip="Align left edges"><Path Style="{StaticResource PathIcon}" Data="{StaticResource IconAlignLeft}" /></Button>
+                <Button Command="{Binding AlignCommand}" CommandParameter="Right" ToolTip="Align right edges"><Path Style="{StaticResource PathIcon}" Data="{StaticResource IconAlignRight}" /></Button>
+                <Button Command="{Binding AlignCommand}" CommandParameter="Top" ToolTip="Align tops"><Path Style="{StaticResource PathIcon}" Data="{StaticResource IconAlignTop}" /></Button>
+                <Button Command="{Binding AlignCommand}" CommandParameter="Bottom" ToolTip="Align bottoms"><Path Style="{StaticResource PathIcon}" Data="{StaticResource IconAlignBottom}" /></Button>
+                <Button Command="{Binding AlignCommand}" CommandParameter="Back" ToolTip="Align backs"><Path Style="{StaticResource PathIcon}" Data="{StaticResource IconAlignBack}" /></Button>
+                <Button Command="{Binding AlignCommand}" CommandParameter="Front" ToolTip="Align fronts"><Path Style="{StaticResource PathIcon}" Data="{StaticResource IconAlignFront}" /></Button>
+                <Separator />
+                <Button Command="{Binding AlignCommand}" CommandParameter="BackWall" ToolTip="Push against the back wall">
+                    <Path Style="{StaticResource PathIcon}" Data="{StaticResource IconToWall}" Stroke="#FF3A4048" StrokeThickness="1" />
+                </Button>
+                <Button Command="{Binding AlignCommand}" CommandParameter="Floor" ToolTip="Put on the floor"><Path Style="{StaticResource PathIcon}" Data="{StaticResource IconToFloor}" /></Button>
+            </ToolBar>
+            <ToolBar Band="1" BandIndex="1">
+                <CheckBox Content="Select whole items" IsChecked="{Binding SelectWholeGroup}" Margin="4,0"
+                          ToolTip="Click selects the whole cabinet; Alt+click selects a single board" />
+                <Separator />
+                <TextBlock Text="Snap" VerticalAlignment="Center" Margin="4,0" />
+                <TextBox Text="{Binding Snap}" Width="40" ToolTip="Grid snap for mouse moves, mm (0 = off)" />
+                <TextBlock Text="Step" VerticalAlignment="Center" Margin="8,0,4,0" />
+                <TextBox Text="{Binding Step}" Width="40" ToolTip="Arrow-key step, mm (Shift = ×10)" />
+            </ToolBar>
+            <ToolBar Band="1" BandIndex="2">
+                <TextBlock Text="Material" VerticalAlignment="Center" Margin="4,0" />
+                <Border Width="22" Height="18" BorderBrush="Gray" BorderThickness="1" Margin="2,0"
+                        Background="{Binding CurrentMaterial, Converter={StaticResource Swatch}}" />
+                <TextBlock Text="{Binding CurrentMaterial.Name}" VerticalAlignment="Center" Margin="4,0" MinWidth="90" />
+                <Button Command="{Binding ApplyMaterialCommand}" ToolTip="Give the selection this material">
+                    <Path Style="{StaticResource PathIcon}" Data="{StaticResource IconPaint}" />
+                </Button>
+            </ToolBar>
+        </ToolBarTray>
+
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock Text="{Binding SelectionText}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding Summary}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock x:Name="CameraStatus" />
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <TextBlock Foreground="DimGray" Text="{Binding ToolHint}" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- Tool palette (left), like PRO100's vertical toolbar. -->
+        <Border DockPanel.Dock="Left" Background="#FFE8E8E8" BorderBrush="#FFC8C8C8" BorderThickness="0,0,1,0"
+                IsEnabled="{Binding IsEditingEnabled}">
+            <StackPanel Margin="2,4">
+                <RadioButton Style="{StaticResource PaletteRadio}" ToolTip="Select and move (S)"
+                             IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEquals}, ConverterParameter=Select}">
+                    <Path Style="{StaticResource PathIcon}" Data="{StaticResource IconCursor}" />
+                </RadioButton>
+                <RadioButton Style="{StaticResource PaletteRadio}" ToolTip="Paint with the current material (P)"
+                             IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEquals}, ConverterParameter=Paint}">
+                    <Path Style="{StaticResource PathIcon}" Data="{StaticResource IconPaint}" />
+                </RadioButton>
+                <RadioButton Style="{StaticResource PaletteRadio}" ToolTip="Pick up a material (I)"
+                             IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEquals}, ConverterParameter=Eyedropper}">
+                    <Path Style="{StaticResource PathIcon}" Data="{StaticResource IconEyedropper}" />
+                </RadioButton>
+                <RadioButton Style="{StaticResource PaletteRadio}" ToolTip="Measure a distance (M)"
+                             IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEquals}, ConverterParameter=Measure}">
+                    <Path Style="{StaticResource PathIcon}" Data="{StaticResource IconRuler}" Stroke="#FF3A4048" StrokeThickness="1.2" />
+                </RadioButton>
+                <Separator Margin="2,6" />
+                <Button Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Click="OnZoomToRoom" ToolTip="Zoom to room" Padding="4" Margin="1,2">
+                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE740;" />
+                </Button>
+                <Button Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Click="OnView3D" ToolTip="Reset 3D view" Padding="4" Margin="1,2">
+                    <TextBlock Style="{StaticResource ViewLabel}" Text="3D" />
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="330" MinWidth="240" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Viewport + reports -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" MinHeight="200" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="200" MinHeight="80" />
+                </Grid.RowDefinitions>
+
+                <Border x:Name="ViewportHost" ClipToBounds="True" Focusable="True" FocusVisualStyle="{x:Null}"
+                        IsEnabled="{Binding IsEditingEnabled}" AllowDrop="True" Drop="OnViewportDrop" DragOver="OnViewportDragOver"
+                        MouseDown="OnViewportMouseDown" MouseMove="OnViewportMouseMove" MouseUp="OnViewportMouseUp"
+                        MouseWheel="OnViewportMouseWheel" LostMouseCapture="OnViewportLostCapture" SizeChanged="OnViewportSizeChanged">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#FFF7F7F7" Offset="0" />
+                            <GradientStop Color="#FFE3E6EA" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Grid>
+                        <Viewport3D x:Name="Viewport" />
+                        <!-- 2D overlay: dimension labels and the measure line, projected from 3D. -->
+                        <Canvas x:Name="Overlay" IsHitTestVisible="False" />
+                        <TextBlock x:Name="ViewName" Margin="8" FontSize="14" FontWeight="SemiBold" Foreground="#80000000"
+                                   HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False" />
+                    </Grid>
+                </Border>
+
+                <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext" />
+
+                <TabControl Grid.Row="2">
+                    <TabItem Header="Cut list">
+                        <DataGrid ItemsSource="{Binding CutList}" AutoGenerateColumns="False" IsReadOnly="True"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Material" Binding="{Binding Material}" Width="140" />
+                                <DataGridTextColumn Header="Length" Binding="{Binding Length}" />
+                                <DataGridTextColumn Header="Width" Binding="{Binding Width}" />
+                                <DataGridTextColumn Header="Thickness" Binding="{Binding Thickness}" />
+                                <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" />
+                                <DataGridTextColumn Header="Area m²" Binding="{Binding AreaM2}" />
+                                <DataGridTextColumn Header="Parts" Binding="{Binding Parts}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+                    <TabItem Header="Costs">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Bottom" Margin="6" FontWeight="SemiBold"
+                                       Text="{Binding TotalCost, StringFormat='Total: {0:N2}'}" />
+                            <DataGrid ItemsSource="{Binding Costs}" AutoGenerateColumns="False" IsReadOnly="True"
+                                      HeadersVisibility="Column" GridLinesVisibility="Horizontal">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Material" Binding="{Binding Material}" Width="180" />
+                                    <DataGridTextColumn Header="Area m²" Binding="{Binding AreaM2}" />
+                                    <DataGridTextColumn Header="Price / m²" Binding="{Binding PricePerM2, StringFormat=N2}" />
+                                    <DataGridTextColumn Header="Cost" Binding="{Binding Cost, StringFormat=N2}" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                    </TabItem>
+                    <TabItem Header="Materials">
+                        <DataGrid x:Name="MaterialsGrid" ItemsSource="{Binding Materials}" AutoGenerateColumns="False"
+                                  CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column"
+                                  BeginningEdit="OnMaterialBeginningEdit" CellEditEnding="OnMaterialCellEditEnding">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Id" Binding="{Binding Id}" IsReadOnly="True" />
+                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="180" />
+                                <DataGridTemplateColumn Header="" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Width="28" Height="14" BorderBrush="Gray" BorderThickness="1"
+                                                    Background="{Binding Converter={StaticResource Swatch}}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Colour" Binding="{Binding Color}" />
+                                <DataGridTextColumn Header="Texture" Binding="{Binding Texture}" IsReadOnly="True" />
+                                <DataGridTextColumn Header="Opacity" Binding="{Binding Opacity}" />
+                                <DataGridTextColumn Header="Thickness" Binding="{Binding Thickness}" />
+                                <DataGridTextColumn Header="Price / m²" Binding="{Binding PricePerM2}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext" />
+
+            <!-- Docked panel: Catalog, Structure, Properties, AI (PRO100's "Find, Catalog, Structure, Lights" window). -->
+            <TabControl Grid.Column="2" Margin="0,2,2,2">
+                <TabItem Header="Catalog" IsEnabled="{Binding IsEditingEnabled}">
+                    <TabControl TabStripPlacement="Top" Margin="0,2,0,0">
+                        <TabItem Header="Cabinets">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Bottom" TextWrapping="Wrap" Foreground="Gray" Margin="4"
+                                           Text="Drag an item into the room, or double-click it to set its sizes first." />
+                                <ListBox x:Name="CatalogList" ItemsSource="{Binding Catalog}"
+                                         SelectedValuePath="Template" SelectedValue="{Binding SelectedTemplate}"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" BorderThickness="0"
+                                         MouseDoubleClick="OnCatalogDoubleClick"
+                                         PreviewMouseLeftButtonDown="OnCatalogMouseDown" PreviewMouseMove="OnCatalogMouseMove">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.GroupStyle>
+                                        <GroupStyle>
+                                            <GroupStyle.HeaderTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="2,8,0,2" />
+                                                </DataTemplate>
+                                            </GroupStyle.HeaderTemplate>
+                                        </GroupStyle>
+                                    </ListBox.GroupStyle>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Width="132" Margin="2" ToolTip="{Binding Name}">
+                                                <Border Background="White" BorderBrush="#FFD0D0D0" BorderThickness="1">
+                                                    <Image Source="{Binding Thumbnail}" Width="120" Height="104" />
+                                                </Border>
+                                                <TextBlock Text="{Binding Name}" TextAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="11" Margin="0,2" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </TabItem>
+                        <TabItem Header="Textures">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Bottom" Margin="4">
+                                    <TextBlock TextWrapping="Wrap" Foreground="Gray" Margin="0,0,0,4"
+                                               Text="Pick a material, then use the paint tool on boards, or apply it to the selection. Double-click a swatch to apply." />
+                                    <WrapPanel>
+                                        <Button Content="Apply to selection" Command="{Binding ApplyMaterialCommand}" Padding="6,2" Margin="0,0,4,4" />
+                                        <Button Content="New…" Command="{Binding NewMaterialCommand}" Padding="6,2" Margin="0,0,4,4" />
+                                        <Button Content="Edit…" Command="{Binding EditMaterialCommand}" Padding="6,2" Margin="0,0,4,4" />
+                                    </WrapPanel>
+                                </StackPanel>
+                                <ListBox ItemsSource="{Binding MaterialPalette}" SelectedValuePath="Id"
+                                         SelectedValue="{Binding CurrentMaterial.Id, Mode=OneWay}" SelectionChanged="OnPaletteSelectionChanged"
+                                         MouseDoubleClick="OnPaletteDoubleClick"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" BorderThickness="0">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Width="88" Margin="2" ToolTip="{Binding Name}">
+                                                <Border Height="76" BorderBrush="#FFB0B0B0" BorderThickness="1"
+                                                        Background="{Binding Converter={StaticResource Swatch}}" />
+                                                <TextBlock Text="{Binding Name}" TextAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="11" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </TabItem>
+                    </TabControl>
+                </TabItem>
+
+                <TabItem Header="Structure" IsEnabled="{Binding IsEditingEnabled}">
+                    <TreeView ItemsSource="{Binding Structure}" SelectedItemChanged="OnStructureSelected" BorderThickness="0">
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Info}" Foreground="Gray" Margin="8,0,0,0" FontSize="11" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </TabItem>
+
+                <TabItem Header="Properties" IsEnabled="{Binding IsEditingEnabled}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="8">
+                            <TextBlock Text="Selection" Style="{StaticResource Header}" Margin="0,0,0,4" />
+                            <TextBlock Text="{Binding SelectionText}" TextWrapping="Wrap" Foreground="DimGray" />
+
+                            <StackPanel DataContext="{Binding SelectedBoard}"
+                                        Visibility="{Binding DataContext.HasSelectedBoard, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Board" Style="{StaticResource Header}" />
+                                <DockPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Item" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding GroupName}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Name" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Name}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Type" Style="{StaticResource FieldLabel}" />
+                                    <TextBlock Text="{Binding Kind}" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Material" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox ItemsSource="{Binding DataContext.MaterialPalette, RelativeSource={RelativeSource AncestorType=Window}}"
+                                              DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding MaterialId}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="X" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding X, StringFormat=0.#}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Y (height)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Y, StringFormat=0.#}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Z" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Z, StringFormat=0.#}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Width" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Width, StringFormat=0.#}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Height" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Height, StringFormat=0.#}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Depth" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Depth, StringFormat=0.#}" />
+                                </DockPanel>
+                                <TextBlock TextWrapping="Wrap" Foreground="Gray" Margin="0,4,0,0"
+                                           Text="Shows one board of the selection. Alt+click a board to edit a different one." />
+                                <Button Content="Edit item sizes…" Margin="0,8,0,0" Padding="4"
+                                        Command="{Binding DataContext.EditItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        ToolTip="Change width, height, shelves, doors, front style… of a library item and rebuild it in place" />
+                            </StackPanel>
+
+                            <TextBlock Text="Room" Style="{StaticResource Header}" />
+                            <DockPanel Style="{StaticResource Field}">
+                                <TextBlock Text="Width" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding RoomWidth, StringFormat=0.#}" />
+                            </DockPanel>
+                            <DockPanel Style="{StaticResource Field}">
+                                <TextBlock Text="Depth" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding RoomDepth, StringFormat=0.#}" />
+                            </DockPanel>
+                            <DockPanel Style="{StaticResource Field}">
+                                <TextBlock Text="Height" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding RoomHeight, StringFormat=0.#}" />
+                            </DockPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <TabItem Header="AI">
+                    <DockPanel Margin="4">
+                        <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+                            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
+                                <Button Content="New chat" Command="{Binding NewChatCommand}" Padding="8,2" Margin="0,0,6,0" />
+                                <Button Content="Stop" Command="{Binding CancelAssistantCommand}" Padding="8,2" Margin="0,0,6,0" />
+                                <Button Content="Send" Command="{Binding SendToAssistantCommand}" Padding="12,2" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <TextBox x:Name="AssistantInputBox" Text="{Binding AssistantInput, UpdateSourceTrigger=PropertyChanged}"
+                                     TextWrapping="Wrap" MinHeight="60" MaxHeight="140" VerticalScrollBarVisibility="Auto"
+                                     AcceptsReturn="False" ToolTip="Enter sends">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding SendToAssistantCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
+                        </DockPanel>
+                        <TextBlock DockPanel.Dock="Bottom" Text="Claude is working…" Foreground="DarkOrange" Margin="0,4,0,0"
+                                   Visibility="{Binding IsAssistantBusy, Converter={StaticResource BoolToVis}}" />
+                        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="Gray" Margin="0,0,0,6"
+                                   Text="Describe a change, e.g. “add a 600 mm drawer cabinet right of the sink and make all fronts cherry raised panel”. One Ctrl+Z undoes everything the AI did for a request." />
+                        <ListBox x:Name="ChatList" ItemsSource="{Binding ChatEntries}" HorizontalContentAlignment="Stretch"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,3">
+                                        <TextBlock Text="{Binding Who}" FontWeight="SemiBold" FontSize="11" Foreground="SteelBlue" />
+                                        <TextBox Text="{Binding Text, Mode=OneWay}" TextWrapping="Wrap" IsReadOnly="True"
+                                                 BorderThickness="0" Background="Transparent" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsTool}" Value="True">
+                                            <Setter Property="Foreground" Value="Gray" />
+                                            <Setter Property="FontSize" Value="11" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+                    </DockPanel>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </DockPanel>
+</Window>

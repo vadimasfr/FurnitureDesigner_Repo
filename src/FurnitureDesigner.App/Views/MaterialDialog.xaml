@@ -1,0 +1,48 @@
+<Window x:Class="FurnitureDesigner.App.Views.MaterialDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Material" SizeToContent="WidthAndHeight" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <StackPanel Margin="14" Width="340">
+        <DockPanel Style="{StaticResource Field}">
+            <TextBlock Text="Name" Style="{StaticResource FieldLabel}" Width="110" />
+            <TextBox x:Name="NameBox" />
+        </DockPanel>
+        <DockPanel Style="{StaticResource Field}">
+            <TextBlock Text="Colour (#RRGGBB)" Style="{StaticResource FieldLabel}" Width="110" />
+            <Border x:Name="ColorPreview" DockPanel.Dock="Right" Width="24" Margin="6,0,0,0" BorderBrush="Gray" BorderThickness="1" />
+            <TextBox x:Name="ColorBox" TextChanged="OnColorChanged" />
+        </DockPanel>
+        <DockPanel Style="{StaticResource Field}">
+            <TextBlock Text="Texture" Style="{StaticResource FieldLabel}" Width="110" />
+            <ComboBox x:Name="TextureBox" SelectionChanged="OnTextureChanged" />
+        </DockPanel>
+        <DockPanel x:Name="ImageRow" Style="{StaticResource Field}">
+            <TextBlock Text="Image file" Style="{StaticResource FieldLabel}" Width="110" />
+            <Button DockPanel.Dock="Right" Content="…" Width="26" Margin="4,0,0,0" Click="OnBrowse" />
+            <TextBox x:Name="ImageBox" />
+        </DockPanel>
+        <DockPanel Style="{StaticResource Field}">
+            <TextBlock Text="Texture tile, mm" Style="{StaticResource FieldLabel}" Width="110" />
+            <TextBox x:Name="TileBox" />
+        </DockPanel>
+        <DockPanel Style="{StaticResource Field}">
+            <TextBlock Text="Thickness, mm" Style="{StaticResource FieldLabel}" Width="110" />
+            <TextBox x:Name="ThicknessBox" />
+        </DockPanel>
+        <DockPanel Style="{StaticResource Field}">
+            <TextBlock Text="Price / m²" Style="{StaticResource FieldLabel}" Width="110" />
+            <TextBox x:Name="PriceBox" />
+        </DockPanel>
+        <DockPanel Style="{StaticResource Field}">
+            <TextBlock Text="Opacity (0.1–1)" Style="{StaticResource FieldLabel}" Width="110" />
+            <TextBox x:Name="OpacityBox" />
+        </DockPanel>
+        <TextBlock Foreground="Gray" TextWrapping="Wrap" Margin="0,8,0,0"
+                   Text="Wood and stone are generated from the colour. For a photo texture choose Image and pick a JPG/PNG (e.g. a scan of a decor sample)." />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="OK" Width="80" IsDefault="True" Click="OnOk" Margin="0,0,8,0" />
+            <Button Content="Cancel" Width="80" IsCancel="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>

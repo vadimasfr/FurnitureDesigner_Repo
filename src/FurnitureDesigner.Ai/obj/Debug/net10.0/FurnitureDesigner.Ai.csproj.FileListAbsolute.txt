@@ -1,0 +1,15 @@
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\obj\Debug\net10.0\FurnitureDesigner.Ai.csproj.AssemblyReference.cache
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\obj\Debug\net10.0\FurnitureDesigner.Ai.GeneratedMSBuildEditorConfig.editorconfig
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\obj\Debug\net10.0\FurnitureDesigner.Ai.AssemblyInfoInputs.cache
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\obj\Debug\net10.0\FurnitureDesigner.Ai.AssemblyInfo.cs
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\obj\Debug\net10.0\FurnitureDesigner.Ai.csproj.CoreCompileInputs.cache
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\bin\Debug\net10.0\FurnitureDesigner.Ai.deps.json
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\bin\Debug\net10.0\FurnitureDesigner.Ai.dll
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\bin\Debug\net10.0\FurnitureDesigner.Ai.pdb
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\bin\Debug\net10.0\FurnitureDesigner.Core.dll
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\bin\Debug\net10.0\FurnitureDesigner.Core.pdb
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\obj\Debug\net10.0\Furnitur.2EC7B41A.Up2Date
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\obj\Debug\net10.0\FurnitureDesigner.Ai.dll
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\obj\Debug\net10.0\refint\FurnitureDesigner.Ai.dll
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\obj\Debug\net10.0\FurnitureDesigner.Ai.pdb
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Ai\obj\Debug\net10.0\ref\FurnitureDesigner.Ai.dll

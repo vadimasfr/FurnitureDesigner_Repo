@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FurnitureDesigner.Core/FurnitureDesigner.Core.csproj" />
+    <Project Path="src/FurnitureDesigner.Ai/FurnitureDesigner.Ai.csproj" />
+    <Project Path="src/FurnitureDesigner.App/FurnitureDesigner.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FurnitureDesigner.Core.Tests/FurnitureDesigner.Core.Tests.csproj" />
+  </Folder>
+</Solution>

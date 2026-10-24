@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "kyBPQcY/xTo=",
+  "success": true,
+  "projectFilePath": "C:\\Dev\\NET10\\FurnitureDesigner\\src\\FurnitureDesigner.App\\FurnitureDesigner.App.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\aae66\\.nuget\\packages\\anthropic\\13.1.0\\anthropic.13.1.0.nupkg.sha512",
+    "C:\\Users\\aae66\\.nuget\\packages\\microsoft.extensions.ai.abstractions\\10.5.1\\microsoft.extensions.ai.abstractions.10.5.1.nupkg.sha512"
+  ],
+  "logs": []
+}

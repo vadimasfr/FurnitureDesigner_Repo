@@ -1,0 +1,11 @@
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Core\bin\Debug\net10.0\FurnitureDesigner.Core.deps.json
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Core\bin\Debug\net10.0\FurnitureDesigner.Core.dll
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Core\bin\Debug\net10.0\FurnitureDesigner.Core.pdb
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Core\obj\Debug\net10.0\FurnitureDesigner.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Core\obj\Debug\net10.0\FurnitureDesigner.Core.AssemblyInfoInputs.cache
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Core\obj\Debug\net10.0\FurnitureDesigner.Core.AssemblyInfo.cs
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Core\obj\Debug\net10.0\FurnitureDesigner.Core.csproj.CoreCompileInputs.cache
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Core\obj\Debug\net10.0\FurnitureDesigner.Core.dll
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Core\obj\Debug\net10.0\refint\FurnitureDesigner.Core.dll
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Core\obj\Debug\net10.0\FurnitureDesigner.Core.pdb
+C:\Dev\NET10\FurnitureDesigner\src\FurnitureDesigner.Core\obj\Debug\net10.0\ref\FurnitureDesigner.Core.dll
