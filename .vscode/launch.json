@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Web app",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/FurnitureDesigner.Web/bin/Debug/net10.0/FurnitureDesigner.Web.dll",
+      "cwd": "${workspaceFolder}/src/FurnitureDesigner.Web",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5080"
+      },
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+        "uriFormat": "%s/?sample"
+      },
+      "console": "internalConsole"
+    },
+    {
+      "name": "Desktop app (WPF)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/FurnitureDesigner.App/bin/Debug/net10.0-windows/FurnitureDesigner.dll",
+      "cwd": "${workspaceFolder}/src/FurnitureDesigner.App",
+      "console": "internalConsole"
+    }
+  ]
+}
